@@ -1,0 +1,66 @@
+.PHONY: all test-bins rust-bins clean help
+.PHONY: asm-validation backward-branch-test basic-branch-asm simple-loop linker-flavours thread-roi
+
+# Default target - build all test binaries
+all: test-bins rust-bins
+
+# Help target
+help:
+	@echo "Available targets:"
+	@echo "  all                  - Build all test binaries (default)"
+	@echo "  test-bins            - Build all test binaries in test_bins/"
+	@echo "  test-bins-basic      - Build basic_branch_asm test"
+	@echo "  test-bins-simple-loop - Build simple_loop test"
+	@echo "  test-bins-asm-validation - Build asm_validation test"
+	@echo "  linker-flavours      - Build linker_flavours test (static/dynamic/vDSO/.so)"
+	@echo "  rust-bins            - Build rust_asm_bins crate"
+	@echo "  clean                - Clean build artifacts"
+
+# Build all test binaries
+test-bins: asm-validation basic-branch-asm intensity-test simple-loop roi-validation linker-flavours thread-roi
+
+asm-validation:
+	@echo "Building asm validation tests..."
+	$(MAKE) -C test_bins/asm_validation
+
+# Individual test binary targets
+basic-branch-asm:
+	@echo "Building basic_branch_asm..."
+	$(MAKE) -C test_bins/basic_branch_asm
+
+intensity-test:
+	@echo "Building intensity_test..."
+	$(MAKE) -C test_bins/intensity_test
+
+simple-loop:
+	@echo "Building simple_loop..."
+	$(MAKE) -C test_bins/simple_loop
+
+roi-validation:
+	@echo "=== NOT === building roi_validation - requires external headers..."
+	#$(MAKE) -C test_bins/roi_validation
+
+thread-roi:
+	@echo "=== NOT === building thread_roi - requires RAVE headers..."
+	#$(MAKE) -C test_bins/thread_roi
+
+linker-flavours:
+	@echo "Building linker_flavours..."
+	$(MAKE) -C test_bins/linker_flavours
+
+# Build Rust assembly binaries
+rust-bins:
+	@echo "Building rust_asm_bins crate..."
+	cd test_bins/rust_asm_bins && cargo build -r
+
+
+# Clean build artifacts
+clean:
+	@echo "Cleaning rust_asm_bins crate..."
+	cd test_bins/rust_asm_bins && cargo clean
+	@echo "Cleaning test binaries..."
+	cd test_bins/basic_branch_asm && $(MAKE) clean || true
+	cd test_bins/simple_loop && $(MAKE) clean || true
+	cd test_bins/asm_validation && $(MAKE) clean || true
+	cd test_bins/linker_flavours && $(MAKE) clean || true
+	cd test_bins/thread_roi && $(MAKE) clean || true

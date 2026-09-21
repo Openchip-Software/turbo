@@ -1,0 +1,1005 @@
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+:root,
+html[data-theme="dark"] {
+    --bg: #16161a;
+    --surface: #1f1f24;
+    --surface2: #27272e;
+    --border: #38383f;
+    --text: #d0d0d8;
+    --dim: #7a7a88;
+    --accent: #5ab3f0;
+    --green: #4caf50;
+    --amber: #ffb300;
+    --red: #ef5350;
+    --row-alt: #1c1c22;
+    --row-hi: #2a2a34;
+    --sort-bg: rgba(90, 179, 240, 0.06);
+}
+
+@media (prefers-color-scheme: light) {
+    :root {
+        --bg: #f4f5f7;
+        --surface: #ffffff;
+        --surface2: #eaeaef;
+        --border: #c8c8d4;
+        --text: #1c1c24;
+        --dim: #60607a;
+        --accent: #1565c0;
+        --green: #2e7d32;
+        --amber: #c17000;
+        --red: #c62828;
+        --row-alt: #f0f0f5;
+        --row-hi: #ddeaf7;
+        --sort-bg: rgba(21, 101, 192, 0.07);
+    }
+}
+
+html[data-theme="light"] {
+    --bg: #f4f5f7;
+    --surface: #ffffff;
+    --surface2: #eaeaef;
+    --border: #c8c8d4;
+    --text: #1c1c24;
+    --dim: #60607a;
+    --accent: #1565c0;
+    --green: #2e7d32;
+    --amber: #c17000;
+    --red: #c62828;
+    --row-alt: #f0f0f5;
+    --row-hi: #ddeaf7;
+    --sort-bg: rgba(21, 101, 192, 0.07);
+}
+
+html,
+body {
+    height: 100%;
+    font-family:
+        "Segoe UI",
+        system-ui,
+        -apple-system,
+        sans-serif;
+    font-size: 13px;
+    background: var(--bg);
+    color: var(--text);
+}
+
+#app {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+}
+
+/* Main container with data panels and detail pane */
+#main-container {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+}
+
+#data-panels {
+    flex: 0 0 75%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    user-select: none;
+}
+
+#detail-pane {
+    flex: 0 0 25%;
+    display: flex;
+    flex-direction: column;
+    background: var(--surface);
+    border-left: 2px solid var(--border);
+    overflow: hidden;
+    user-select: none;
+}
+
+#data-panels.frozen,
+#detail-pane.frozen {
+    user-select: text;
+}
+
+#data-panels.frozen table.data-tbl tbody tr {
+    cursor: text;
+}
+
+.detail-header {
+    padding: 12px 18px;
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text);
+}
+
+.detail-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 18px;
+}
+
+/* Overview panel: quick links to the annotation & hotspots reports, shown at
+   the top of the detail pane regardless of selection. */
+.overview-links {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px 18px;
+}
+
+.overview-link {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text);
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    text-decoration: none;
+}
+
+.overview-link svg {
+    flex: none;
+    color: var(--accent);
+}
+
+.overview-link:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.detail-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: var(--dim);
+    font-size: 0.85rem;
+    text-align: center;
+    padding: 20px;
+}
+
+.detail-name {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--accent);
+    font-family: "Cascadia Code", "Fira Code", "Consolas", monospace;
+    margin-bottom: 20px;
+    word-break: break-all;
+}
+
+.detail-annotate {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.annotate-btn {
+    display: inline-block;
+    padding: 6px 12px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #fff;
+    background: var(--accent);
+    border-radius: 6px;
+    text-decoration: none;
+    border: 1px solid transparent;
+}
+
+.annotate-btn:hover {
+    filter: brightness(1.1);
+}
+
+.detail-section {
+    margin-bottom: 24px;
+}
+
+.detail-section-title {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.detail-top-row {
+    display: flex;
+    gap: 24px;
+    align-items: flex-start;
+}
+
+.detail-stats-section {
+    flex: 0 0 30%;
+    min-width: 0;
+}
+
+.detail-instr-mix-section {
+    flex: 0 0 67%;
+    min-width: 0;
+}
+
+.detail-stats {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.detail-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.detail-stat-label {
+    font-size: 0.7rem;
+    color: var(--dim);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.detail-stat-value {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+}
+
+.detail-empty-note {
+    color: var(--dim);
+    font-size: 1.0rem;
+    font-style: italic;
+    padding: 4px 0;
+    text-align: center;
+}
+
+.histogram-container {
+    margin-bottom: 20px;
+}
+
+.histogram-title {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--accent);
+    margin-bottom: 8px;
+}
+
+.histogram-canvas {
+    display: block;
+    width: 100%;
+    height: 140px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+}
+
+.histogram-summary {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 6px;
+    font-size: 0.72rem;
+    color: var(--dim);
+}
+
+.instr-mix {
+    margin-bottom: 4px;
+}
+
+.instr-mix-summary {
+    cursor: pointer;
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    margin-bottom: 0;
+    user-select: none;
+}
+
+.instr-mix-summary:hover {
+    color: var(--accent);
+}
+
+.instr-mix-count {
+    font-size: 0.7rem;
+    font-weight: 400;
+    color: var(--dim);
+    text-transform: none;
+    letter-spacing: 0;
+}
+
+.instr-mix-body {
+    margin-top: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    max-height: 20vh;
+    overflow-y: auto;
+}
+
+.instr-mix-row {
+    display: grid;
+    grid-template-columns: 1fr auto 48px;
+    gap: 10px;
+    align-items: baseline;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 0.78rem;
+}
+
+.instr-mix-row:nth-child(odd) {
+    background: var(--surface2);
+}
+
+.instr-mix-mnemonic {
+    font-family: "Cascadia Code", "Fira Code", "Consolas", monospace;
+    color: var(--accent);
+    word-break: break-all;
+}
+
+.instr-mix-value {
+    font-variant-numeric: tabular-nums;
+    color: var(--text);
+    text-align: right;
+}
+
+.instr-mix-pct {
+    font-variant-numeric: tabular-nums;
+    color: var(--dim);
+    text-align: right;
+}
+
+.histogram-tooltip {
+    position: fixed;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 6px 10px;
+    font-size: 0.75rem;
+    color: var(--text);
+    pointer-events: none;
+    white-space: nowrap;
+    z-index: 1000;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    display: none;
+}
+
+.histogram-tooltip.visible {
+    display: block;
+}
+
+.histogram-tooltip-bucket {
+    font-weight: 600;
+    color: var(--accent);
+}
+
+.histogram-tooltip-count {
+    margin-left: 8px;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Header */
+header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 8px 18px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+}
+header h1 {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--accent);
+    white-space: nowrap;
+}
+
+/* Header logo. Sized in CSS rather than left to the file's own 660x220 so the
+   header height never depends on the artwork's intrinsic size. */
+.brand-logo {
+    width: 102px;
+    height: 34px;
+    display: block;
+    flex-shrink: 0;
+    border-radius: 5px;
+}
+
+/* The logo themes itself from prefers-color-scheme, which is right only while
+   the dashboard is following the OS too. Once a theme is picked explicitly the
+   two can disagree, so restate its palette here for that case; these win over
+   the file's own `svg { ... }` rules on specificity, and only apply to the
+   copy index.html inlines into the page (an <img> is out of CSS's reach). */
+html[data-theme="light"] .brand-logo {
+    --tb-sheet: #ffffff;
+    --tb-grid: #2563eb;
+    --tb-rule: #2563eb;
+    --tb-accent: #0284c7;
+    --tb-die: #f0f7ff;
+    --tb-glow: #3b82f6;
+    --tb-sp1: #0d9488;
+    --tb-sp2: #0284c7;
+    --tb-sp3: #2563eb;
+    --tb-wd1: #0284c7;
+    --tb-wd2: #1d4ed8;
+    --tb-inline: #bfdbfe;
+    --tb-rv64: #0369a1;
+    --tb-tag: #3e6b99;
+}
+html[data-theme="dark"] .brand-logo {
+    --tb-sheet: #0b1220;
+    --tb-grid: #38bdf8;
+    --tb-rule: #38bdf8;
+    --tb-accent: #22d3ee;
+    --tb-die: #0e1b2e;
+    --tb-glow: #22d3ee;
+    --tb-sp1: #2dd4bf;
+    --tb-sp2: #22d3ee;
+    --tb-sp3: #60a5fa;
+    --tb-wd1: #22d3ee;
+    --tb-wd2: #3b82f6;
+    --tb-inline: #ffffff;
+    --tb-rv64: #7dd3fc;
+    --tb-tag: #a5c8e6;
+}
+
+/* Status bar */
+#status-bar {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    font-size: 0.8rem;
+    color: var(--dim);
+    flex-wrap: wrap;
+}
+.status-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+.status-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--dim);
+    flex-shrink: 0;
+    transition: background 0.3s;
+}
+.status-dot.connected {
+    background: var(--green);
+    box-shadow: 0 0 6px var(--green);
+}
+.status-dot.reconnecting {
+    background: var(--amber);
+}
+.status-dot.error {
+    background: var(--red);
+}
+
+#freeze-label {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    cursor: pointer;
+    user-select: none;
+    color: var(--text);
+}
+#freeze-label input {
+    cursor: pointer;
+    accent-color: var(--accent);
+}
+
+/* Theme toggle */
+#theme-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 8px 3px 4px;
+    border-radius: 14px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--dim);
+    cursor: pointer;
+    font-size: 0.75rem;
+    font-family: inherit;
+    transition:
+        border-color 0.15s,
+        color 0.15s;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+#theme-toggle:hover {
+    border-color: var(--accent);
+    color: var(--text);
+}
+.theme-pill {
+    position: relative;
+    width: 26px;
+    height: 14px;
+    border-radius: 7px;
+    background: var(--border);
+    flex-shrink: 0;
+    transition: background 0.2s;
+}
+.theme-pill::after {
+    content: "";
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--dim);
+    top: 2px;
+    left: 2px;
+    transition:
+        transform 0.2s,
+        background 0.2s;
+}
+html[data-theme="light"] .theme-pill::after {
+    transform: translateX(12px);
+    background: var(--accent);
+}
+@media (prefers-color-scheme: light) {
+    html:not([data-theme="dark"]) .theme-pill::after {
+        transform: translateX(12px);
+        background: var(--accent);
+    }
+}
+
+/* Data sections */
+.data-section {
+    display: flex;
+    overflow: hidden;
+    flex-direction: column;
+}
+
+#panel-rois {
+    flex: 0 1 auto;
+    max-height: 50vh;
+    min-height: 150px;
+}
+
+/* A stack of per-thread graphs does not fit beside the ROI table inside 50vh,
+   and the table losing all its rows costs the cross-highlight that makes the
+   stack worth looking at. Pressing "Per thread" is an explicit request for
+   that view, so let this panel take the room from Functions for as long as it
+   is on -- toggling back restores the split. */
+#panel-rois:has(.roi-flamegraph-slot.per-thread) {
+    max-height: 78vh;
+}
+
+#panel-functions {
+    flex: 1;
+    border-top: 2px solid var(--border);
+}
+
+	.section-header {
+	    padding: 12px 18px;
+	    background: var(--surface2);
+	    border-bottom: 1px solid var(--border);
+	    font-size: 0.9rem;
+	    font-weight: 600;
+	    color: var(--text);
+	    display: flex;
+	    align-items: center;
+	    justify-content: space-between;
+	    gap: 12px;
+	}
+
+	.section-title {
+	    font-weight: 700;
+	}
+
+	.roi-flamegraph-toggle {
+	    appearance: none;
+	    border: 1px solid var(--border);
+	    border-radius: 999px;
+	    padding: 6px 10px;
+	    background: var(--surface2);
+	    color: var(--text);
+	    font-size: 0.76rem;
+	    font-weight: 600;
+	    letter-spacing: 0.02em;
+	    display: inline-flex;
+	    align-items: center;
+	    gap: 8px;
+	    cursor: pointer;
+	    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+	}
+
+	.roi-flamegraph-toggle:hover {
+	    border-color: var(--accent);
+	    color: var(--accent);
+	    background: var(--surface);
+	}
+
+	.roi-flamegraph-toggle:focus-visible {
+	    outline: 2px solid var(--accent);
+	    outline-offset: 2px;
+	}
+
+	.roi-flamegraph-toggle-mark {
+	    width: 8px;
+	    height: 8px;
+	    border-radius: 50%;
+	    background: var(--accent);
+	    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 20%, transparent);
+	}
+
+	.roi-flamegraph-controls {
+	    display: flex;
+	    align-items: center;
+	    gap: 8px;
+	}
+
+	/* Which mode the panel is in is not otherwise readable once the graphs
+	   below are stacked, so the switch carries the state. */
+	.roi-flamegraph-toggle[aria-pressed="true"] {
+	    border-color: var(--accent);
+	    color: var(--accent);
+	    background: var(--surface);
+	}
+
+	/* One block per thread in the per-thread view. The rule is on the
+	   adjacent sibling so the first thread does not get a divider under the
+	   panel's own top border. */
+	.roi-flamegraph-hart + .roi-flamegraph-hart {
+	    margin-top: 10px;
+	    border-top: 1px solid var(--border);
+	    padding-top: 10px;
+	}
+
+	/* The widget hides its own title inside the dashboard (flamegraph.css),
+	   since the panel's header says what the single graph is. With a stack
+	   of them the title is the thread label, so bring it back -- one class
+	   more specific, no !important. */
+	.roi-flamegraph-slot.per-thread .ocfg-title {
+	    display: inline-flex;
+	    align-items: baseline;
+	    gap: 10px;
+	    flex-wrap: wrap;
+	}
+
+	.roi-flamegraph-hart-stat {
+	    font-weight: 400;
+	    color: var(--dim);
+	    font-variant-numeric: tabular-nums;
+	}
+
+	/* N identical search boxes are clutter, and they duplicate both the
+	   merged graph's search and the ROI table's filter. Reset zoom stays:
+	   it is one button, and it is the explicit way back out of a zoom. */
+	.roi-flamegraph-slot.per-thread .ocfg-search {
+	    display: none;
+	}
+
+	.roi-flamegraph-slot.per-thread .ocfg-bar {
+	    margin-bottom: 4px;
+	}
+
+	.roi-flamegraph-panel {
+	    display: block;
+	    border-top: 1px solid var(--border);
+	    background: var(--surface);
+	}
+
+	.roi-flamegraph-panel[hidden] {
+	    display: none;
+	}
+
+	.roi-flamegraph-slot {
+	    display: block;
+	    padding: 12px;
+	    overflow: hidden;
+	}
+
+	/* Only with several graphs stacked. The panel is a flex column whose
+	   table has `flex: 1` and so contributes no natural height: an uncapped
+	   stack takes the panel to its own max-height and leaves the table at
+	   zero. Cap and scroll the stack, so a thread count beyond what fits
+	   costs a scroll rather than the table. */
+	.roi-flamegraph-slot.per-thread {
+	    max-height: 46vh;
+	    overflow-y: auto;
+	}
+
+	.roi-flamegraph-pending {
+	    font-size: 0.78rem;
+	    color: var(--dim);
+	}
+
+/* Toolbar inside panel */
+.tbl-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 7px 18px;
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    flex-wrap: wrap;
+}
+.tbl-toolbar label {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    cursor: pointer;
+    color: var(--dim);
+    user-select: none;
+    font-size: 0.8rem;
+}
+.tbl-toolbar label input {
+    cursor: pointer;
+    accent-color: var(--accent);
+}
+.tbl-filter {
+    padding: 3px 8px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--surface);
+    color: var(--text);
+    font-size: 0.8rem;
+    font-family: inherit;
+    outline: none;
+    width: 200px;
+}
+.tbl-filter:focus {
+    border-color: var(--accent);
+}
+.tbl-filter::placeholder {
+    color: var(--dim);
+}
+.tbl-info {
+    margin-left: auto;
+    font-size: 0.8rem;
+    color: var(--dim);
+}
+
+/* Scrollable area */
+.tbl-scroll {
+    flex: 1;
+    overflow: auto;
+}
+
+/* Data table */
+table.data-tbl {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8rem;
+    table-layout: auto;
+}
+table.data-tbl thead {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: var(--surface2);
+}
+table.data-tbl thead th {
+    padding: 7px 10px;
+    text-align: left;
+    border-bottom: 2px solid var(--border);
+    border-right: 1px solid var(--border);
+    color: var(--accent);
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+    font-weight: 600;
+    font-size: 0.75rem;
+    letter-spacing: 0.03em;
+}
+table.data-tbl thead th:first-child {
+    width: 250px;
+    min-width: 250px;
+    max-width: 250px;
+}
+table.data-tbl thead th:last-child {
+    border-right: none;
+}
+table.data-tbl thead th:hover {
+    background: var(--sort-bg);
+}
+table.data-tbl thead th.sort-col {
+    background: var(--sort-bg);
+}
+table.data-tbl thead th.sort-asc::after {
+    content: " \25B2";
+    color: var(--accent);
+}
+table.data-tbl thead th.sort-desc::after {
+    content: " \25BC";
+    color: var(--accent);
+}
+
+table.data-tbl tbody tr {
+    border-bottom: 1px solid var(--border);
+    border-left: 3px solid transparent;
+}
+table.data-tbl tbody tr:nth-child(even) {
+    background: var(--row-alt);
+}
+table.data-tbl tbody tr:hover {
+    background: var(--row-hi);
+}
+table.data-tbl tbody tr:focus {
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
+    background: var(--row-hi);
+}
+table.data-tbl tbody tr.selected {
+    background: var(--row-hi);
+    border-left: 3px solid var(--accent);
+}
+table.data-tbl tbody tr.selected:focus {
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
+}
+table.data-tbl tbody tr {
+    cursor: pointer;
+}
+table.data-tbl tbody td {
+    padding: 5px 10px;
+    border-right: 1px solid var(--border);
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+table.data-tbl tbody td:last-child {
+    border-right: none;
+}
+
+td.num {
+    text-align: right;
+}
+/* The cache column draws two bars, so it needs a floor wide enough for the
+   track to mean anything and the cell's default nowrap to stay put. */
+td.cache-cell {
+    white-space: nowrap;
+    min-width: 150px;
+}
+
+/* Two-bar cache infographic (see fmtCacheBars in app.js). Both tracks are the
+   same width and share one axis -- L1 accesses -- so the bars are directly
+   comparable by eye; the fixed-width label and rate columns keep the track
+   edges aligned across rows. */
+.cbar {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.cbar-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    line-height: 1;
+}
+.cbar-lbl {
+    color: var(--dim);
+    font-size: 0.62rem;
+    min-width: 14px;
+}
+.cbar-track {
+    flex: 1;
+    min-width: 60px;
+    display: flex;
+    height: 6px;
+    border-radius: 2px;
+    overflow: hidden;
+    background: color-mix(in srgb, var(--dim) 22%, transparent);
+}
+.cbar-hit {
+    background: var(--green);
+}
+.cbar-miss {
+    background: var(--red);
+}
+.cbar-counts {
+    color: var(--dim);
+    font-size: 0.68rem;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+    min-width: 110px;
+}
+.cbar-rate {
+    color: var(--text);
+    font-size: 0.68rem;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+    min-width: 38px;
+}
+.cbar-key {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 2px;
+    color: var(--dim);
+    font-size: 0.62rem;
+}
+.cbar-key i {
+    width: 7px;
+    height: 7px;
+    border-radius: 2px;
+}
+.cbar-key i + i {
+    margin-left: 5px;
+}
+/* The detail pane has room to breathe, so the bars get taller there. */
+.cbar-detail {
+    gap: 6px;
+    margin-top: 12px;
+}
+.cbar-detail .cbar-track {
+    height: 9px;
+    min-width: 120px;
+}
+
+.cache-stats {
+    margin-bottom: 4px;
+}
+.cache-stats-summary {
+    cursor: pointer;
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    margin-bottom: 0;
+    user-select: none;
+}
+.cache-stats-summary:hover {
+    color: var(--accent);
+}
+.cache-stats-count {
+    font-size: 0.7rem;
+    font-weight: 400;
+    color: var(--dim);
+    text-transform: none;
+    letter-spacing: 0;
+}
+td.name-cell {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    width: 250px;
+    min-width: 250px;
+    max-width: 250px;
+    color: var(--accent);
+    font-family: "Cascadia Code", "Fira Code", "Consolas", monospace;
+    font-size: 0.75rem;
+}
+
+/* Placeholder / spinner */
+.placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+    flex-direction: column;
+    gap: 10px;
+    color: var(--dim);
+    font-size: 0.9rem;
+}
+.spinner {
+    width: 28px;
+    height: 28px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.9s linear infinite;
+}
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}

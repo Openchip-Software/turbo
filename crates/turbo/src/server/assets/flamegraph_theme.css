@@ -1,0 +1,49 @@
+/* Theme variables for the *standalone* roi_flamegraph.html page only.
+ *
+ * Embedded fragments inherit these from their host page's oc.css. The standalone
+ * page links no stylesheet (it has to work as a lone file on disk), so without
+ * this block every var() in flamegraph.css would fall back to its dark literal
+ * and the persisted-theme script would have nothing to switch. Values are the
+ * oc.css subset the widget reads, including the prefers-color-scheme default for
+ * when no theme has been persisted. */
+:root,
+html[data-theme="dark"] {
+    --bg: #16161a;
+    --surface: #1f1f24;
+    --border: #38383f;
+    --text: #d0d0d8;
+    --dim: #7a7a88;
+    --accent: #5ab3f0;
+}
+
+@media (prefers-color-scheme: light) {
+    :root {
+        --bg: #f4f5f7;
+        --surface: #ffffff;
+        --border: #c8c8d4;
+        --text: #1c1c24;
+        --dim: #60607a;
+        --accent: #1565c0;
+    }
+}
+
+html[data-theme="light"] {
+    --bg: #f4f5f7;
+    --surface: #ffffff;
+    --border: #c8c8d4;
+    --text: #1c1c24;
+    --dim: #60607a;
+    --accent: #1565c0;
+}
+
+html,
+body {
+    margin: 0;
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+}
+
+body {
+    padding: 16px;
+}

@@ -1,0 +1,80 @@
+[package]
+name = "turbo"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license = "Apache-2.0"
+description = "Tuning Utilities for Riscv Benchmarking and Optimization"
+
+default-run = "turbo"
+
+# The integration suite is one binary rooted at `tests/main.rs`; its siblings in
+# `tests/` are modules of it, not test targets of their own.
+autotests = false
+
+[features]
+# default = ["trace-data-csr"]
+trace-data-csr = []
+dhat-heap = []
+profile = ["hotpath/hotpath", "hotpath/hotpath-alloc"]
+
+[dependencies]
+turbo-tracer-shared = { path = "../turbo-tracer-shared" }
+
+hotpath.workspace = true
+rustc-hash.workspace = true
+elf.workspace = true
+gimli.workspace = true
+object.workspace = true
+riscv-isa.workspace = true
+log.workspace = true
+env_logger.workspace = true
+bitflags.workspace = true
+postcard.workspace = true
+thiserror.workspace = true
+anyhow.workspace = true
+cpp_demangle.workspace = true
+rustc-demangle.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+schemars.workspace = true
+dhat.workspace = true
+ctrlc.workspace = true
+chrono.workspace = true
+flate2.workspace = true
+tokio.workspace = true
+synthetto.workspace = true
+
+# Server dependencies (from turbo-server)
+axum.workspace = true
+futures-util.workspace = true
+tokio-stream.workspace = true
+tower-http.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+clap.workspace = true
+base64.workspace = true
+
+[[test]]
+name = "integration"
+path = "tests/main_tests.rs"
+
+[package.metadata.deb]
+maintainer = "Harry van Haaren"
+copyright = "Apache-2.0"
+extended-description = """TURBO Tuning Utilities for RISC-V Benchmarking and Optimization. This is a SIMD/vector code performance analysis tool."""
+section = "devel"
+priority = "optional"
+assets = [
+    # Binary
+    ["target/release/turbo", "usr/bin/turbo", "755"],
+    # Install config into system wide location by default
+    ["src/environment_config.json", "usr/share/turbo/environment_config.json", "644"],
+    ["src/cpu_config.json", "usr/share/turbo/cpu_config.json", "644"],
+    # Assets directory - copy individual files preserving structure
+    ["src/server/assets/*.html", "usr/share/turbo/assets/", "644"],
+    ["src/server/assets/*.js", "usr/share/turbo/assets/", "644"],
+    ["src/server/assets/*.css", "usr/share/turbo/assets/", "644"],
+    ["src/server/assets/*.svg", "usr/share/turbo/assets/", "644"],
+    ["src/server/assets/*.png", "usr/share/turbo/assets/", "644"],
+]

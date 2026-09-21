@@ -1,0 +1,161 @@
+/* ROI flamegraph widget (see processing/roi_flamegraph.rs).
+ *
+ * Inlined into the page by `to_html_fragment`, not linked, because the fragment
+ * has to survive being dropped into an arbitrary page or <div>. Every selector
+ * is namespaced `ocfg` for the same reason -- nothing is styled by element name.
+ *
+ * Colours are aliased off the oc.css custom properties with hard fallbacks, so
+ * the widget themes with the surrounding UI on a page that loads oc.css and
+ * still looks right on one that does not. Frame fills are computed in JS from
+ * the region name. */
+.ocfg {
+    --ocfg-bg: var(--surface, #1f1f24);
+    --ocfg-border: var(--border, #38383f);
+    --ocfg-text: var(--text, #d0d0d8);
+    --ocfg-dim: var(--dim, #7a7a88);
+    --ocfg-accent: var(--accent, #5ab3f0);
+    font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+    font-size: 13px;
+    color: var(--ocfg-text);
+    background: var(--ocfg-bg);
+    border: 1px solid var(--ocfg-border);
+    border-radius: 6px;
+    padding: 10px;
+}
+
+/* The widget lands in pages with their own box model, so it sets its own rather
+   than inherit one that would break the percentage frame layout. */
+.ocfg,
+.ocfg * {
+    box-sizing: border-box;
+}
+
+.ocfg-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 8px;
+}
+
+.ocfg-title {
+    font-weight: 600;
+    color: var(--ocfg-accent);
+    margin-right: auto;
+}
+
+.roi-flamegraph-slot .ocfg-title {
+    display: none;
+}
+
+.ocfg-note {
+    font-size: 0.75rem;
+    color: var(--ocfg-dim);
+    font-variant-numeric: tabular-nums;
+}
+
+.ocfg-search,
+.ocfg-btn {
+    padding: 3px 9px;
+    border: 1px solid var(--ocfg-border);
+    border-radius: 4px;
+    background: var(--ocfg-bg);
+    color: var(--ocfg-text);
+    font: inherit;
+    font-size: 0.8rem;
+    outline: none;
+}
+
+.ocfg-search {
+    width: 170px;
+}
+
+.ocfg-btn {
+    cursor: pointer;
+}
+
+.ocfg-search:focus,
+.ocfg-btn:hover {
+    border-color: var(--ocfg-accent);
+}
+
+.ocfg-btn:hover {
+    color: var(--ocfg-accent);
+}
+
+/* The frame area is a plain positioned box; every frame is absolutely placed
+   inside it with percentage x/width, so the graph reflows with the container at
+   any width without a re-layout pass in JS. */
+.ocfg-frames {
+    position: relative;
+    width: 100%;
+    overflow: hidden;
+}
+
+.ocfg-frame {
+    position: absolute;
+    height: 17px;
+    overflow: hidden;
+    white-space: nowrap;
+    border-radius: 2px;
+    border: 1px solid rgba(0, 0, 0, 0.28);
+    /* Fixed dark ink: the fills behind it are mid-lightness flame colours in
+       both themes, so this stays readable without a per-theme rule. */
+    color: #16161a;
+    font-size: 11px;
+    line-height: 15px;
+    padding: 0 4px;
+    cursor: pointer;
+    user-select: none;
+}
+
+.ocfg-frame:hover {
+    outline: 1px solid var(--ocfg-text);
+    outline-offset: -1px;
+}
+
+.ocfg-frame.ocfg-fade {
+    opacity: 0.28;
+}
+
+.ocfg-frame.ocfg-hit {
+    outline: 2px solid var(--ocfg-accent);
+    outline-offset: -2px;
+}
+
+/* The region selected in the host page's ROI table (or by clicking a frame).
+   Deliberately not the accent outline a search hit gets: the two can be on the
+   same frame, and they mean different things. */
+.ocfg-frame.ocfg-sel {
+    outline: 2px solid var(--ocfg-text);
+    outline-offset: -2px;
+    box-shadow: 0 0 6px rgba(0, 0, 0, 0.45);
+    font-weight: 600;
+}
+
+.ocfg-tip {
+    position: fixed;
+    z-index: 1000;
+    display: none;
+    max-width: 460px;
+    padding: 6px 10px;
+    border: 1px solid var(--ocfg-border);
+    border-radius: 4px;
+    background: var(--ocfg-bg);
+    color: var(--ocfg-text);
+    font-size: 0.75rem;
+    font-variant-numeric: tabular-nums;
+    pointer-events: none;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+}
+
+.ocfg-tip.ocfg-on {
+    display: block;
+}
+
+.ocfg-tip-name {
+    font-weight: 600;
+    color: var(--ocfg-accent);
+    word-break: break-all;
+    margin-bottom: 3px;
+}

@@ -1,0 +1,33 @@
+[package]
+name = "turbo-tracer"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license = "GPL-2.0-or-later"
+description = "The TURBO  QEMU plugin for tracing execution and RISC-V performance analysis"
+
+[package.metadata.deb]
+maintainer = "Harry van Haaren"
+copyright = "GPL-2.0-or-later"
+section = "devel"
+priority = "optional"
+
+[lib]
+crate-type = ["cdylib"]
+# Do not run "tests" here, as this is not a Rust binary (and will be missing symbols..)
+# because it is a plugin for Qemu, built as a C dynamic library.
+test = false
+doctest = false
+
+[dependencies]
+qemu-plugin = { git = "https://github.com/qemu-rs/qemu-rs.git", package = "qemu-plugin", default-features = false, rev = "4854135b" }
+turbo-tracer-shared = { path = "../turbo-tracer-shared" }
+
+log.workspace = true
+env_logger.workspace = true
+postcard.workspace = true
+serde.workspace = true
+
+[features]
+default = ["plugin-api-v6"]
+plugin-api-v6 = ["qemu-plugin/plugin-api-v6"]

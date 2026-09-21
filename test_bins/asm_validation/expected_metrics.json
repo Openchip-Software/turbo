@@ -1,0 +1,621 @@
+{
+  "vfmacc_simple": [
+    {
+      "name": "loop",
+      "instructions": 3000,
+      "float_elements": 64000,
+      "fmacc_elements": 32000,
+      "vector_instructions": 1000,
+      "vector_load_instructions": 0,
+      "load_bytes": 0,
+      "store_bytes": 0,
+      "vl_avg_e8": 0,
+      "vl_max_e8": 0,
+      "vl_avg_e16": 0,
+      "vl_max_e16": 0,
+      "vl_avg_e32": 32,
+      "vl_max_e32": 32,
+      "vl_avg_e64": 0,
+      "vl_max_e64": 0,
+      "vector_elements": 32000,
+      "vector_load_elements": 0,
+      "branches": 1000,
+      "float_instructions": 1000,
+      "fmacc_instructions": 1000
+    }
+  ],
+  "lmul_stress": [
+    {
+      "name": "loop",
+      "instructions": 3000,
+      "float_elements": 0,
+      "fmacc_elements": 0,
+      "vector_instructions": 1000,
+      "vector_load_instructions": 0,
+      "load_bytes": 0,
+      "store_bytes": 0,
+      "vl_avg_e8": 32,
+      "vl_max_e8": 32,
+      "vl_avg_e16": 0,
+      "vl_max_e16": 0,
+      "vl_avg_e32": 0,
+      "vl_max_e32": 0,
+      "vl_avg_e64": 0,
+      "vl_max_e64": 0,
+      "vector_elements": 32000,
+      "vector_load_elements": 0,
+      "vl_hist_e8_raw": [
+        [
+          32,
+          1000
+        ]
+      ],
+      "vl_hist_e8_m8_raw": [
+        [
+          32,
+          1000
+        ]
+      ],
+      "branches": 1000,
+      "float_instructions": 0,
+      "fmacc_instructions": 0
+    }
+  ],
+  "vl_variation": [
+    {
+      "name": "loop",
+      "instructions": 1500,
+      "float_elements": 0,
+      "fmacc_elements": 0,
+      "vector_instructions": 300,
+      "vector_load_instructions": 0,
+      "load_bytes": 0,
+      "store_bytes": 0,
+      "vl_avg_e8": 0,
+      "vl_max_e8": 0,
+      "vl_avg_e16": 0,
+      "vl_max_e16": 0,
+      "vl_avg_e32": 0,
+      "vl_max_e32": 0,
+      "vl_avg_e64": 133,
+      "vl_max_e64": 256,
+      "vector_elements": 40192,
+      "vector_load_elements": 0,
+      "branches": 300,
+      "float_instructions": 0,
+      "fmacc_instructions": 0
+    },
+    {
+      "name": "lmul1",
+      "instructions": 9,
+      "float_elements": 0,
+      "fmacc_elements": 0,
+      "vector_instructions": 4,
+      "vector_load_instructions": 0,
+      "load_bytes": 0,
+      "store_bytes": 0,
+      "vl_avg_e8": 2048,
+      "vl_max_e8": 2048,
+      "vl_avg_e16": 1024,
+      "vl_max_e16": 1024,
+      "vl_avg_e32": 512,
+      "vl_max_e32": 512,
+      "vl_avg_e64": 256,
+      "vl_max_e64": 256,
+      "vector_elements": 3840,
+      "vector_load_elements": 0,
+      "branches": 0,
+      "float_instructions": 0,
+      "fmacc_instructions": 0
+    },
+    {
+      "name": "lmul2",
+      "instructions": 6,
+      "float_elements": 0,
+      "fmacc_elements": 0,
+      "vector_instructions": 3,
+      "vector_load_instructions": 0,
+      "load_bytes": 0,
+      "store_bytes": 0,
+      "vl_avg_e8": 4000,
+      "vl_max_e8": 4000,
+      "vl_avg_e16": 2048,
+      "vl_max_e16": 2048,
+      "vl_avg_e32": 1024,
+      "vl_max_e32": 1024,
+      "vl_avg_e64": 0,
+      "vl_max_e64": 0,
+      "vector_elements": 7072,
+      "vector_load_elements": 0,
+      "branches": 0,
+      "float_instructions": 0,
+      "fmacc_instructions": 0
+    }
+  ],
+  "vadd_simple": [
+    {
+      "name": "loop",
+      "instructions": 3000,
+      "float_elements": 0,
+      "fmacc_elements": 0,
+      "vector_instructions": 1000,
+      "vector_load_instructions": 0,
+      "load_bytes": 0,
+      "store_bytes": 0,
+      "vl_avg_e8": 32,
+      "vl_max_e8": 32,
+      "vl_avg_e16": 0,
+      "vl_max_e16": 0,
+      "vl_avg_e32": 0,
+      "vl_max_e32": 0,
+      "vl_avg_e64": 0,
+      "vl_max_e64": 0,
+      "vector_elements": 32000,
+      "vector_load_elements": 0,
+      "branches": 1000,
+      "float_instructions": 0,
+      "fmacc_instructions": 0
+    }
+  ],
+  "vfmul_simple": [
+    {
+      "name": "loop",
+      "instructions": 3000,
+      "float_elements": 32000,
+      "fmacc_elements": 0,
+      "vector_instructions": 1000,
+      "vector_load_instructions": 0,
+      "load_bytes": 0,
+      "store_bytes": 0,
+      "vl_avg_e8": 0,
+      "vl_max_e8": 0,
+      "vl_avg_e16": 0,
+      "vl_max_e16": 0,
+      "vl_avg_e32": 32,
+      "vl_max_e32": 32,
+      "vl_avg_e64": 0,
+      "vl_max_e64": 0,
+      "vector_elements": 32000,
+      "vector_load_elements": 0,
+      "branches": 1000,
+      "float_instructions": 1000,
+      "fmacc_instructions": 0
+    }
+  ],
+  "vload_store_simple": [
+    {
+      "name": "loop",
+      "instructions": 400,
+      "float_elements": 0,
+      "fmacc_elements": 0,
+      "vector_instructions": 200,
+      "vector_load_instructions": 100,
+      "load_bytes": 204800,
+      "store_bytes": 204800,
+      "vl_avg_e8": 0,
+      "vl_max_e8": 0,
+      "vl_avg_e16": 0,
+      "vl_max_e16": 0,
+      "vl_avg_e32": 0,
+      "vl_max_e32": 0,
+      "vl_avg_e64": 256,
+      "vl_max_e64": 256,
+      "vector_elements": 51200,
+      "vector_load_elements": 25600,
+      "branches": 100,
+      "float_instructions": 0,
+      "fmacc_instructions": 0
+    }
+  ],
+  "stream_triad": [
+    {
+      "name": "loop",
+      "instructions": 600,
+      "float_elements": 3200,
+      "fmacc_elements": 1600,
+      "vector_instructions": 400,
+      "vector_load_instructions": 200,
+      "load_bytes": 25600,
+      "store_bytes": 12800,
+      "vl_avg_e8": 0,
+      "vl_max_e8": 0,
+      "vl_avg_e16": 0,
+      "vl_max_e16": 0,
+      "vl_avg_e32": 0,
+      "vl_max_e32": 0,
+      "vl_avg_e64": 16,
+      "vl_max_e64": 16,
+      "vector_elements": 6400,
+      "vector_load_elements": 3200,
+      "branches": 100,
+      "float_instructions": 100,
+      "fmacc_instructions": 100
+    }
+  ],
+  "daxpy": [
+    {
+      "name": "loop",
+      "instructions": 600,
+      "float_elements": 3200,
+      "fmacc_elements": 1600,
+      "vector_instructions": 400,
+      "vector_load_instructions": 200,
+      "load_bytes": 25600,
+      "store_bytes": 12800,
+      "vl_avg_e8": 0,
+      "vl_max_e8": 0,
+      "vl_avg_e16": 0,
+      "vl_max_e16": 0,
+      "vl_avg_e32": 0,
+      "vl_max_e32": 0,
+      "vl_avg_e64": 16,
+      "vl_max_e64": 16,
+      "vector_elements": 6400,
+      "vector_load_elements": 3200,
+      "branches": 100,
+      "float_instructions": 100,
+      "fmacc_instructions": 100
+    }
+  ],
+  "compute_intensive": [
+    {
+      "name": "loop",
+      "instructions": 1300,
+      "float_elements": 512000,
+      "fmacc_elements": 256000,
+      "vector_instructions": 1100,
+      "vector_load_instructions": 100,
+      "load_bytes": 102400,
+      "store_bytes": 0,
+      "vl_avg_e8": 0,
+      "vl_max_e8": 0,
+      "vl_avg_e16": 0,
+      "vl_max_e16": 0,
+      "vl_avg_e32": 256,
+      "vl_max_e32": 256,
+      "vl_avg_e64": 0,
+      "vl_max_e64": 0,
+      "vector_elements": 281600,
+      "vector_load_elements": 25600,
+      "branches": 100,
+      "float_instructions": 1000,
+      "fmacc_instructions": 1000
+    }
+  ],
+  "full_reg_ops": [
+    {
+      "name": "load_whole_reg",
+      "instructions": 2,
+      "float_elements": 0,
+      "fmacc_elements": 0,
+      "vector_instructions": 1,
+      "vector_load_instructions": 1,
+      "load_bytes": 4096,
+      "store_bytes": 0,
+      "vl_avg_e8": 0,
+      "vl_max_e8": 0,
+      "vl_avg_e16": 0,
+      "vl_max_e16": 0,
+      "vl_avg_e32": 512,
+      "vl_max_e32": 512,
+      "vl_avg_e64": 0,
+      "vl_max_e64": 0,
+      "vector_elements": 512,
+      "vector_load_elements": 512,
+      "vl_hist_e32_raw": [
+        [
+          512,
+          1
+        ]
+      ],
+      "vl_hist_e32_m1_raw": [
+        [
+          512,
+          1
+        ]
+      ],
+      "branches": 0,
+      "float_instructions": 0,
+      "fmacc_instructions": 0
+    },
+    {
+      "name": "store_whole_reg",
+      "instructions": 2,
+      "float_elements": 0,
+      "fmacc_elements": 0,
+      "vector_instructions": 1,
+      "vector_load_instructions": 0,
+      "load_bytes": 0,
+      "store_bytes": 2048,
+      "vl_avg_e8": 0,
+      "vl_max_e8": 0,
+      "vl_avg_e16": 0,
+      "vl_max_e16": 0,
+      "vl_avg_e32": 512,
+      "vl_max_e32": 512,
+      "vl_avg_e64": 0,
+      "vl_max_e64": 0,
+      "vector_elements": 2048,
+      "vector_load_elements": 0,
+      "vl_hist_e32_raw": [
+        [
+          512,
+          1
+        ]
+      ],
+      "vl_hist_e32_m1_raw": [
+        [
+          512,
+          1
+        ]
+      ],
+      "branches": 0,
+      "float_instructions": 0,
+      "fmacc_instructions": 0
+    },
+    {
+      "name": "load_normal",
+      "instructions": 2,
+      "float_elements": 0,
+      "fmacc_elements": 0,
+      "vector_instructions": 1,
+      "vector_load_instructions": 1,
+      "load_bytes": 2048,
+      "store_bytes": 0,
+      "vl_avg_e8": 0,
+      "vl_max_e8": 0,
+      "vl_avg_e16": 0,
+      "vl_max_e16": 0,
+      "vl_avg_e32": 0,
+      "vl_max_e32": 0,
+      "vl_avg_e64": 256,
+      "vl_max_e64": 256,
+      "vector_elements": 256,
+      "vector_load_elements": 256,
+      "vl_hist_e64_raw": [
+        [
+          256,
+          1
+        ]
+      ],
+      "vl_hist_e64_m1_raw": [
+        [
+          256,
+          1
+        ]
+      ],
+      "branches": 0,
+      "float_instructions": 0,
+      "fmacc_instructions": 0
+    },
+    {
+      "name": "store_normal",
+      "instructions": 2,
+      "float_elements": 0,
+      "fmacc_elements": 0,
+      "vector_instructions": 1,
+      "vector_load_instructions": 0,
+      "load_bytes": 0,
+      "store_bytes": 2048,
+      "vl_avg_e8": 0,
+      "vl_max_e8": 0,
+      "vl_avg_e16": 0,
+      "vl_max_e16": 0,
+      "vl_avg_e32": 512,
+      "vl_max_e32": 512,
+      "vl_avg_e64": 0,
+      "vl_max_e64": 0,
+      "vector_elements": 512,
+      "vector_load_elements": 0,
+      "vl_hist_e32_raw": [
+        [
+          512,
+          1
+        ]
+      ],
+      "vl_hist_e32_m1_raw": [
+        [
+          512,
+          1
+        ]
+      ],
+      "branches": 0,
+      "float_instructions": 0,
+      "fmacc_instructions": 0
+    }
+  ],
+  "vseg_load_store": [
+    {
+      "name": "loop",
+      "instructions": 1500,
+      "float_elements": 0,
+      "fmacc_elements": 0,
+      "vector_instructions": 1000,
+      "vector_load_instructions": 500,
+      "load_bytes": 460800,
+      "store_bytes": 460800,
+      "vl_avg_e8": 64,
+      "vl_max_e8": 64,
+      "vl_avg_e16": 0,
+      "vl_max_e16": 0,
+      "vl_avg_e32": 64,
+      "vl_max_e32": 64,
+      "vl_avg_e64": 64,
+      "vl_max_e64": 64,
+      "vector_elements": 243200,
+      "vector_load_elements": 121600,
+      "branches": 100,
+      "float_instructions": 0,
+      "fmacc_instructions": 0
+    }
+  ],
+  "vseg_strided_indexed": [
+    {
+      "name": "loop",
+      "instructions": 800,
+      "float_elements": 0,
+      "fmacc_elements": 0,
+      "vector_instructions": 600,
+      "vector_load_instructions": 300,
+      "load_bytes": 307200,
+      "store_bytes": 307200,
+      "vl_avg_e8": 0,
+      "vl_max_e8": 0,
+      "vl_avg_e16": 0,
+      "vl_max_e16": 0,
+      "vl_avg_e32": 0,
+      "vl_max_e32": 0,
+      "vl_avg_e64": 64,
+      "vl_max_e64": 64,
+      "vector_elements": 76800,
+      "vector_load_elements": 38400,
+      "branches": 100,
+      "float_instructions": 0,
+      "fmacc_instructions": 0
+    }
+  ],
+  "vzvbb_ops": [
+    {
+      "name": "loop",
+      "instructions": 2000,
+      "float_elements": 0,
+      "fmacc_elements": 0,
+      "vector_instructions": 1600,
+      "vector_load_instructions": 0,
+      "load_bytes": 0,
+      "store_bytes": 0,
+      "vl_avg_e8": 0,
+      "vl_max_e8": 0,
+      "vl_avg_e16": 0,
+      "vl_max_e16": 0,
+      "vl_avg_e32": 64,
+      "vl_max_e32": 64,
+      "vl_avg_e64": 64,
+      "vl_max_e64": 64,
+      "vector_elements": 102400,
+      "vector_load_elements": 0,
+      "branches": 100,
+      "float_instructions": 0,
+      "fmacc_instructions": 0
+    }
+  ],
+  "vindexed_eew_mismatch": [
+    {
+      "name": "loop",
+      "instructions": 700,
+      "float_elements": 0,
+      "fmacc_elements": 0,
+      "vector_instructions": 500,
+      "vector_load_instructions": 300,
+      "load_bytes": 204800,
+      "store_bytes": 153600,
+      "vl_avg_e8": 0,
+      "vl_max_e8": 0,
+      "vl_avg_e16": 0,
+      "vl_max_e16": 0,
+      "vl_avg_e32": 0,
+      "vl_max_e32": 0,
+      "vl_avg_e64": 64,
+      "vl_max_e64": 64,
+      "vector_elements": 44800,
+      "vector_load_elements": 25600,
+      "branches": 100,
+      "float_instructions": 0,
+      "fmacc_instructions": 0
+    }
+  ],
+  "vload_widths": [
+    {
+      "name": "loop",
+      "instructions": 2800,
+      "float_elements": 0,
+      "fmacc_elements": 0,
+      "vector_instructions": 2200,
+      "vector_load_instructions": 1300,
+      "load_bytes": 288800,
+      "store_bytes": 192800,
+      "vl_avg_e8": 64,
+      "vl_max_e8": 64,
+      "vl_avg_e16": 64,
+      "vl_max_e16": 64,
+      "vl_avg_e32": 64,
+      "vl_max_e32": 64,
+      "vl_avg_e64": 64,
+      "vl_max_e64": 64,
+      "vector_elements": 129600,
+      "vector_load_elements": 77600,
+      "branches": 100,
+      "float_instructions": 0,
+      "fmacc_instructions": 0
+    }
+  ],
+  "vseg_nf_sweep": [
+    {
+      "name": "loop",
+      "instructions": 1300,
+      "float_elements": 0,
+      "fmacc_elements": 0,
+      "vector_instructions": 1100,
+      "vector_load_instructions": 900,
+      "load_bytes": 249600,
+      "store_bytes": 25600,
+      "vl_avg_e8": 64,
+      "vl_max_e8": 64,
+      "vl_avg_e16": 0,
+      "vl_max_e16": 0,
+      "vl_avg_e32": 0,
+      "vl_max_e32": 0,
+      "vl_avg_e64": 0,
+      "vl_max_e64": 0,
+      "vector_elements": 275200,
+      "vector_load_elements": 249600,
+      "branches": 100,
+      "float_instructions": 0,
+      "fmacc_instructions": 0
+    }
+  ],
+  "vindexed_widths": [
+    {
+      "name": "loop",
+      "instructions": 2000,
+      "float_elements": 0,
+      "fmacc_elements": 0,
+      "vector_instructions": 1800,
+      "vector_load_instructions": 900,
+      "load_bytes": 563200,
+      "store_bytes": 563200,
+      "vl_avg_e8": 0,
+      "vl_max_e8": 0,
+      "vl_avg_e16": 0,
+      "vl_max_e16": 0,
+      "vl_avg_e32": 0,
+      "vl_max_e32": 0,
+      "vl_avg_e64": 64,
+      "vl_max_e64": 64,
+      "vector_elements": 140800,
+      "vector_load_elements": 70400,
+      "branches": 100,
+      "float_instructions": 0,
+      "fmacc_instructions": 0
+    }
+  ],
+  "vleff_trim": [
+    {
+      "name": "loop",
+      "instructions": 700,
+      "float_elements": 0,
+      "fmacc_elements": 0,
+      "vector_instructions": 300,
+      "vector_load_instructions": 100,
+      "load_bytes": 800,
+      "store_bytes": 1600,
+      "vl_avg_e8": 8,
+      "vl_max_e8": 8,
+      "vector_elements": 2400,
+      "vector_load_elements": 800,
+      "branches": 100,
+      "float_instructions": 0,
+      "fmacc_instructions": 0
+    }
+  ]
+}

@@ -1,0 +1,40 @@
+[build]
+#target = "riscv64gc-unknown-linux-gnu"
+target = "riscv64gc-unknown-linux-musl"
+
+# CFLAGS="-march=rv64gcv" cargo build -r
+
+[target.riscv64gc-unknown-linux-gnu]
+linker = "clang"
+runner = "qemu-riscv64 -L /usr/riscv64-linux-gnu"
+rustflags = [
+    "-C",
+    "target-feature=+v",
+    "-C",
+    "target-cpu=generic-rv64",
+    # "-C",
+    # "link-arg=-fuse-ld=lld",
+    "-C",
+    "link-arg=--target=riscv64-unknown-linux-gnu",
+    "-C",
+    "link-arg=-march=rv64gv",
+]
+
+[target.riscv64gc-unknown-linux-musl]
+linker = "clang"
+runner = "qemu-riscv64"
+rustflags = [
+    # The +crt-static is required, to force static link of the whole C RT too, so 100% static linked!
+    # This is known to not work with e.g. OpenSSL and other libs, which require glibc (and hence dyn linking)
+    "-C",
+    "target-feature=+v,+crt-static",
+    "-C",
+    "target-cpu=generic-rv64",
+    # GNU ld on an x86-64 host cannot link RISC-V; lld can.
+    "-C",
+    "link-arg=-fuse-ld=lld",
+    "-C",
+    "link-arg=--target=riscv64-unknown-linux-musl",
+    "-C",
+    "link-arg=-march=rv64gv",
+]

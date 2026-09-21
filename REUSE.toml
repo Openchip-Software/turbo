@@ -1,0 +1,20 @@
+version = 1
+
+# TURBO project itself is Apache-2.0
+[[annotations]]
+SPDX-FileCopyrightText = "2026 Openchip & Software Technologies, S.L."
+SPDX-License-Identifier = "Apache-2.0"
+path = ["crates/turbo/**", "test_bins/**", ".asm-lsp.toml", ".cargo/*", ".gitignore", "Cargo.lock", "Cargo.toml", "Makefile.tests", "README.md", "third-party/initialize_dependency.sh", "CODE_OF_CONDUCT.md", "SECURITY.md", "CONTRIBUTING.md"]
+
+# TURBO-tracer links QEMU-rs, and QEMU headers, so GPLv2+
+[[annotations]]
+path = "crates/turbo-tracer/**"
+SPDX-FileCopyrightText = "2026 Openchip & Software Technologies, S.L."
+SPDX-License-Identifier = "GPL-2.0-or-later"
+
+# TURBO-tracer-shared is a common library used from both above crates
+# It is dual-licensed for compatibility with both licenses
+[[annotations]]
+path = "crates/turbo-tracer-shared/**"
+SPDX-FileCopyrightText = "2026 Openchip & Software Technologies, S.L."
+SPDX-License-Identifier = "Apache-2.0 OR MIT"

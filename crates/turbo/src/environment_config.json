@@ -1,0 +1,7 @@
+{
+    "qemu_bin": "/usr/local/bin/qemu-riscv64",
+    "qemu_plugin_dir": "/app/plugins",
+    "loader_path": "/usr/riscv64-linux-gnu/",
+    "turbo_tracer_plugin": "/usr/lib/libturbo_tracer.so",
+    "_default_cpu_config": "/path/to/optional/default/cpuconfig.json, remove underscore in name"
+}

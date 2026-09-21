@@ -1,0 +1,334 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Openchip Turbo</title>
+
+        <!-- Served straight out of the assets directory by the server's static
+             fallback, same as the stylesheets below. -->
+        <link rel="icon" type="image/png" sizes="144x144" href="/icon.png" />
+        <link rel="apple-touch-icon" href="/icon.png" />
+
+        <link rel="stylesheet" href="/oc.css" />
+        <!-- The ROI flamegraph's stylesheet and behaviour are loaded from the
+             assets directory, not taken from the copies inlined in the run's
+             generated roi_flamegraph.html: that file is written once, at the end
+             of a run, so an older output directory would otherwise pin the
+             dashboard to whatever widget code shipped when it was produced. The
+             fetched fragment contributes only the graph and its data. -->
+        <link rel="stylesheet" href="/flamegraph.css" />
+        <script src="/flamegraph.js" defer></script>
+        <script>
+            (function () {
+                var t = localStorage.getItem("theme");
+                if (t === "light" || t === "dark") {
+                    document.documentElement.setAttribute("data-theme", t);
+                }
+            })();
+        </script>
+        <script src="/app.js" defer></script>
+    </head>
+    <body>
+        <div id="app">
+            <header>
+                <h1 id="brand">
+                    <!-- Ships as an <img> so the header is still branded with
+                         JS off or the fetch failing; the script at the bottom
+                         swaps in the same file inline, which is what lets the
+                         theme toggle repaint it (see .brand-logo in oc.css).
+                         Decorative: the wordmark beside it says the name. -->
+                    <img
+                        id="brand-logo"
+                        class="brand-logo"
+                        src="/logo-css.svg"
+                        alt=""
+                        width="102"
+                        height="34"
+                    />
+                </h1>
+                <div id="status-bar">
+                    <span class="status-item">
+                        <span class="status-dot" id="sse-dot"></span>
+                        <span id="sse-label">Connecting...</span>
+                    </span>
+                    <span
+                        class="status-item"
+                        id="upd-info"
+                        style="display: none"
+                    >
+                        Last update: <span id="upd-time">--</span>
+                    </span>
+                    <label
+                        id="freeze-label"
+                        title="Pause table rendering while SSE keeps running in the background"
+                    >
+                        <input type="checkbox" id="freeze-cb" />
+                        Freeze display (Allows copying from table)
+                    </label>
+                    <button id="theme-toggle" title="Toggle light/dark theme">
+                        <span class="theme-pill"></span>
+                        <span id="theme-lbl">Dark</span>
+                    </button>
+                </div>
+            </header>
+
+            <div id="main-container">
+                <div id="data-panels">
+                    <section class="data-section" id="panel-rois">
+                        <div class="section-header roi-section-header">
+                            <span class="section-title">ROIs</span>
+                            <div class="roi-flamegraph-controls">
+                                <!-- Stays hidden unless the run wrote a
+                                     per-thread index, i.e. unless more than
+                                     one guest thread has a graph of its own.
+                                     Labelled with what a click does, like the
+                                     button beside it. -->
+                                <button
+                                    type="button"
+                                    class="roi-flamegraph-toggle"
+                                    id="roi-flamegraph-threads"
+                                    aria-pressed="false"
+                                    aria-controls="roi-flamegraph-panel"
+                                    hidden
+                                >
+                                    <span class="roi-flamegraph-toggle-label">Per thread</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    class="roi-flamegraph-toggle"
+                                    id="roi-flamegraph-toggle"
+                                    aria-expanded="true"
+                                    aria-controls="roi-flamegraph-panel"
+                                >
+                                    <span class="roi-flamegraph-toggle-mark" aria-hidden="true"></span>
+                                    <span class="roi-flamegraph-toggle-label">Hide flamegraph</span>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="roi-flamegraph-panel" id="roi-flamegraph-panel">
+                            <div class="roi-flamegraph-slot" id="roi-flamegraph-slot">
+                                <!-- Replaced wholesale once the graph is
+                                     fetched; the panel is open from the start,
+                                     so it must say something in the meantime. -->
+                                <div class="roi-flamegraph-pending">
+                                    The ROI flamegraph appears here when the run
+                                    finishes.
+                                </div>
+                            </div>
+                        </div>
+                        <div class="tbl-toolbar">
+                            <input
+                                type="text"
+                                class="tbl-filter"
+                                id="roi-filter"
+                                placeholder="Filter by name..."
+                            />
+                            <span class="tbl-info" id="roi-info"
+                                >No data yet</span
+                            >
+                        </div>
+                        <div class="tbl-scroll" id="roi-scroll">
+                            <div class="placeholder" id="roi-placeholder">
+                                <div class="spinner"></div>
+                                <span>Waiting for SSE data...</span>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="data-section" id="panel-functions">
+                        <div class="section-header">Functions</div>
+                        <div class="tbl-toolbar">
+                            <input
+                                type="text"
+                                class="tbl-filter"
+                                id="fn-filter"
+                                placeholder="Filter by name..."
+                            />
+                            <span class="tbl-info" id="fn-info"
+                                >No data yet</span
+                            >
+                        </div>
+                        <div class="tbl-scroll" id="fn-scroll">
+                            <div class="placeholder" id="fn-placeholder">
+                                <div class="spinner"></div>
+                                <span>Waiting for SSE data...</span>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+
+                <aside id="detail-pane">
+                    <section id="overview-panel">
+                        <div class="detail-header">Overview</div>
+                        <div class="overview-links">
+                            <a
+                                class="overview-link"
+                                target="_blank"
+                                rel="noopener"
+                                href="/annotate/annotate_index.html"
+                            >
+                                <svg
+                                    viewBox="0 0 24 24"
+                                    width="16"
+                                    height="16"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="2"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    aria-hidden="true"
+                                >
+                                    <path
+                                        d="M4 3h11l5 5v13a0 0 0 0 1 0 0H4a0 0 0 0 1 0 0V3z"
+                                    />
+                                    <path d="M14 3v6h6" />
+                                    <path d="M8 13l-2 2 2 2" />
+                                    <path d="M14 13l2 2-2 2" />
+                                </svg>
+                                <span>Source &amp; ASM annotation</span>
+                            </a>
+                            <a
+                                class="overview-link"
+                                target="_blank"
+                                rel="noopener"
+                                href="/annotate/annotate_hotspots.html"
+                            >
+                                <svg
+                                    viewBox="0 0 24 24"
+                                    width="16"
+                                    height="16"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="2"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    aria-hidden="true"
+                                >
+                                    <path
+                                        d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"
+                                    />
+                                </svg>
+                                <span>Hotspots &mdash; worst loops</span>
+                            </a>
+                            <a
+                                class="overview-link"
+                                target="_blank"
+                                rel="noopener"
+                                href="/roi-flamegraph"
+                            >
+                                <svg
+                                    viewBox="0 0 24 24"
+                                    width="16"
+                                    height="16"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="2"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    aria-hidden="true"
+                                >
+                                    <path d="M3 21h18" />
+                                    <path
+                                        d="M6 21c-1-4 1-6 1-9 0-2-1-3-1-5a4 4 0 0 1 8 0c0 2-1 3-1 5 0 1 .5 2 1.5 3 1.3 1.3 2.5 3 2.5 6"
+                                    />
+                                </svg>
+                                <span>ROI Flamegraph</span>
+                            </a>
+                        </div>
+                    </section>
+                    <div class="detail-header" id="detail-header">Details</div>
+                    <div class="detail-content" id="detail-content">
+                        <div class="detail-placeholder">
+                            Select a ROI or Function to view detailed histogram
+                            information
+                        </div>
+                    </div>
+                </aside>
+            </div>
+        </div>
+        <script>
+            (function () {
+                function currentTheme() {
+                    var t = document.documentElement.getAttribute("data-theme");
+                    if (t) return t;
+                    return window.matchMedia("(prefers-color-scheme: light)")
+                        .matches
+                        ? "light"
+                        : "dark";
+                }
+
+                function setTheme(theme) {
+                    document.documentElement.setAttribute("data-theme", theme);
+                    localStorage.setItem("theme", theme);
+                    var lbl = document.getElementById("theme-lbl");
+                    if (lbl)
+                        lbl.textContent = theme === "light" ? "Light" : "Dark";
+                }
+
+                // Sync label to actual current theme on load
+                var lbl = document.getElementById("theme-lbl");
+                if (lbl)
+                    lbl.textContent =
+                        currentTheme() === "light" ? "Light" : "Dark";
+
+                document
+                    .getElementById("theme-toggle")
+                    .addEventListener("click", function () {
+                        setTheme(currentTheme() === "dark" ? "light" : "dark");
+                    });
+
+                // Keep label in sync when system preference changes and no explicit choice is saved
+                window
+                    .matchMedia("(prefers-color-scheme: light)")
+                    .addEventListener("change", function (e) {
+                        if (!localStorage.getItem("theme")) {
+                            document.documentElement.removeAttribute(
+                                "data-theme",
+                            );
+                            var lbl = document.getElementById("theme-lbl");
+                            if (lbl)
+                                lbl.textContent = e.matches ? "Light" : "Dark";
+                        }
+                    });
+            })();
+        </script>
+        <script>
+            // Replace the header logo <img> with the same file inlined. An
+            // <img> renders in its own document, so the logo can only see the
+            // OS colour scheme and would stay light while the dashboard is
+            // toggled dark (and vice versa); inlined, oc.css reaches its
+            // --tb-* custom properties and themes it with the rest of the UI.
+            // Any failure here leaves the <img> exactly as it was.
+            (function () {
+                var img = document.getElementById("brand-logo");
+                if (!img || !window.fetch || !window.DOMParser) return;
+                fetch(img.src)
+                    .then(function (r) {
+                        return r.ok ? r.text() : Promise.reject(r.status);
+                    })
+                    .then(function (text) {
+                        var doc = new DOMParser().parseFromString(
+                            text,
+                            "image/svg+xml",
+                        );
+                        var svg = doc.documentElement;
+                        if (
+                            !svg ||
+                            svg.nodeName.toLowerCase() !== "svg" ||
+                            doc.getElementsByTagName("parsererror").length
+                        )
+                            return;
+                        svg = document.importNode(svg, true);
+                        svg.setAttribute("id", "brand-logo");
+                        svg.setAttribute("class", "brand-logo");
+                        svg.setAttribute("aria-hidden", "true");
+                        svg.removeAttribute("role");
+                        svg.removeAttribute("aria-labelledby");
+                        img.parentNode.replaceChild(svg, img);
+                    })
+                    .catch(function () {});
+            })();
+        </script>
+    </body>
+</html>

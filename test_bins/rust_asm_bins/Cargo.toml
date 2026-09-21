@@ -1,0 +1,20 @@
+[workspace]
+# empty, ignore workspace above here, as this builds for rv64 only
+
+[package]
+name = "rust_asm_bins"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+libc = "0.2.180"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+[dev-dependencies]
+rand = "0.10"
+
+[profile.release]
+# always add debug symbols, even in release builds
+debug = true
+opt-level = 3

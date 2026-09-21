@@ -1,0 +1,26 @@
+# Ignore default Rust build directory
+**/target**/
+
+# Ignore .md files in general: LLM output
+**/*.md
+!README.md
+
+# Ignore third-party deps: the riscv-isa checkout is produced by
+# third-party/initialize_dependency.sh, not committed. The script itself is.
+third-party/*
+!third-party/initialize_dependency.sh
+
+# Ignore .riscv (binaries) and .txt (output files) in tests
+test_bins/*/*.txt
+test_bins/*/*.so
+test_bins/*/*.riscv
+# asm_validation builds into a bins/ subdir, one level deeper than the above
+test_bins/*/bins/*.riscv
+# linker_flavours keeps one .so in a libs/ subdir (the LD_LIBRARY_PATH test)
+test_bins/linker_flavours/libs/
+
+# Ignore ".bin" trace files
+*.bin
+
+# Ignore the "output" directory of run artifacts
+output/*

@@ -1,0 +1,91 @@
+[workspace]
+resolver = "2"
+members = ["crates/turbo", "crates/turbo-tracer", "crates/turbo-tracer-shared"]
+
+[workspace.package]
+version = "0.5.0"
+edition = "2021"
+# Minimum supported Rust version, found by building the workspace with each
+# toolchain: 1.88 fails in the qemu-plugin git dependency, which uses
+# `File::lock` (stable in 1.89) while declaring rust-version 1.88.
+rust-version = "1.89"
+authors = ["Harry van Haaren"]
+
+[workspace.dependencies]
+base64 = "0.23.1"
+elf = "0.8.0"
+gimli = "0.34.0"
+object = "0.40.0"
+serde = { version = "1.0.228", features = ["derive", "rc"] }
+serde_json = "1.0"
+schemars = "1.2.1"
+log = "0.4.29"
+env_logger = "0.11.8"
+anyhow = "1.0.101"
+clap = { version = "4.5.58", features = ["derive"] }
+
+# webserver features
+axum = "0.8.9"
+
+# axum & async stuff
+futures-util = { version = "0.3", default-features = false, features = [
+    "sink",
+    "std",
+] }
+tokio = { version = "1.0", features = ["full"] }
+tokio-stream = "0.1"
+tower-http = { version = "0.7.0", features = ["fs", "trace", "cors"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+thiserror = "2.0.18"
+cpp_demangle = "0.5.1"
+rustc-demangle = "0.1.27"
+dhat = "0.3.3"
+
+# qemu VL streaming
+postcard = { version = "1.0", features = ["alloc"] }
+
+# PlatformSettings bitmasks
+bitflags = "2"
+
+# qemu binary/trace run caching
+sha2 = "0.11"
+
+# fast integer hashing (FxHash) for HashMap with integer keys
+rustc-hash = "2.1"
+
+# hotpath profiler
+hotpath = "0.23.1"
+
+# ctrl-c signal handler
+ctrlc = "3.4"
+
+# date/time
+chrono = "0.4"
+
+# gz decompression (zlib-rs backend instead of miniz_oxide/system zlib)
+flate2 = { version = "1.1", default-features = false, features = ["zlib-rs"] }
+
+# synthetto for generating perfetto traces
+synthetto = "0.0.1"
+
+# PATCHED CRATES
+# Turbo requires vector ISA decoding, which is currently only available as a patch
+# to the riscv-isa crate. The [patch.crates-io] line at the end of this file redirects
+# it to third-party/riscv-isa, which is fetched via a git clone and patched via this script:
+#
+#     ./third-party/initialize_dependency.sh
+#
+# once after cloning this repo to create it; until it exists, every cargo
+# command in this workspace fails while resolving the patch.
+riscv-isa = "0.3.1"
+
+[patch.crates-io]
+riscv-isa = { path = "third-party/riscv-isa" }
+
+
+[profile.release]
+# Always include debug symbols in the release builds
+# they do not impact performance, and they do give a lot more inspection-ability
+debug = 1
+opt-level = 3

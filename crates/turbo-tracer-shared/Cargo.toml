@@ -1,0 +1,17 @@
+[package]
+name = "turbo-tracer-shared"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license = "MIT"
+
+[lib]
+# this crate is a Rust library, allowing other Rust libraries to link
+# against it, without any QEMU C API/plugin functions getting linked in.
+crate-type = ["rlib"]
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+postcard.workspace = true
+flate2.workspace = true

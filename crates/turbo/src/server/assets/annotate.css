@@ -1,0 +1,147 @@
+:root, html[data-theme="dark"] {
+  color-scheme: dark;
+  --bg:#16161a; --surface:#1f1f24; --border:#38383f; --text:#d0d0d8;
+  --dim:#7a7a88; --accent:#5ab3f0; --green:#4caf50; --amber:#ffb300; --red:#ef5350;
+  --orange:#e08a5a;
+  --lmul-m1:#5ab3f0; --lmul-m2:#7ecb6a; --lmul-m4:#f0c75a; --lmul-m8:#ef7a6d;
+  --lmul-mf2:#c491e0; --lmul-mf4:#5ad8d2; --lmul-mf8:#e08a5a; --lmul-none:#5ab3f0;
+}
+@media (prefers-color-scheme: light) {
+  :root {
+    color-scheme: light;
+    --bg:#f4f5f7; --surface:#ffffff; --border:#c8c8d4; --text:#1c1c24;
+    --dim:#60607a; --accent:#1565c0; --green:#2e7d32; --amber:#c17000; --red:#c62828;
+    --orange:#d84315;
+    --lmul-m1:#1565c0; --lmul-m2:#2e7d32; --lmul-m4:#c17000; --lmul-m8:#c62828;
+    --lmul-mf2:#7b1fa2; --lmul-mf4:#00838f; --lmul-mf8:#d84315; --lmul-none:#1565c0;
+  }
+}
+html[data-theme="light"] {
+  color-scheme: light;
+  --bg:#f4f5f7; --surface:#ffffff; --border:#c8c8d4; --text:#1c1c24;
+  --dim:#60607a; --accent:#1565c0; --green:#2e7d32; --amber:#c17000; --red:#c62828;
+  --orange:#d84315;
+  --lmul-m1:#1565c0; --lmul-m2:#2e7d32; --lmul-m4:#c17000; --lmul-m8:#c62828;
+  --lmul-mf2:#7b1fa2; --lmul-mf4:#00838f; --lmul-mf8:#d84315; --lmul-none:#1565c0;
+}
+body { background:var(--bg); color:var(--text); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; margin:0 auto; padding:1.5rem; width:70%; box-sizing:border-box; }
+h1 { font-size:1.1rem; color:var(--text); }
+h2 { font-size:0.95rem; color:var(--accent); margin-top:1.5rem; border-bottom:1px solid var(--border); padding-bottom:.3rem; }
+a { color:var(--accent); text-decoration:none; }
+a:hover { text-decoration:underline; }
+table { border-collapse:collapse; width:100%; font-size:12px; }
+td { padding:0 9px; vertical-align:bottom; white-space:pre; }
+/* Column sizing: the narrow metric columns shrink to their content
+   (width:1% + nowrap is the auto-layout "size to content" idiom), while the
+   instruction column absorbs all remaining width so long disassembly / source
+   lines have room. Keep per-column padding tight so the metrics pack close. */
+td.ln, td.count, td.freq, td.pc, td.cls { width:1%; white-space:nowrap; padding:0 8px; }
+td.ins { width:100%; padding-right:12px; }
+/* Source (C) code is dimmed; ASM is the bright/primary content. */
+.src { background:var(--surface); }
+.src td.code { color:var(--dim); font-weight:600; }
+.asm td { color:var(--text); }
+/* Statically-disassembled instructions the trace never executed (exec == 0):
+   dimmed so the eye is drawn to what actually ran, not padded-in dead code. */
+tr.asm.zero td { color:var(--dim); opacity:.55; }
+tr.asm.zero .count { color:var(--dim); }
+.ln { color:var(--dim); text-align:right; user-select:none; opacity:.7; }
+/* The line column is the hover affordance for "which source file is this?". */
+tr.asm td.ln, tr.src td.ln { cursor:help; }
+tr.asm td.ln:hover, tr.src td.ln:hover { color:var(--accent); opacity:1; }
+.count { text-align:right; color:var(--amber); }
+.pc { color:var(--dim); }
+.bar { background:var(--accent); opacity:.35; display:inline-block; height:10px; border-radius:2px; }
+.tag { color:var(--dim); }
+.tag-vector { color:var(--accent); }
+.tag-float { color:var(--green); }
+.tag-fmacc { color:var(--red); font-weight:700; }
+.tag-branch { color:var(--orange); font-weight:600; }
+.summary { color:var(--dim); margin-bottom:1rem; }
+/* Per-instruction VL histogram (vec column). */
+.vec { white-space:normal; }
+.vhist-head { color:var(--dim); font-size:10px; margin-bottom:1px; }
+.vbin { display:flex; align-items:center; gap:6px; line-height:1.4; }
+.vbin-label { color:var(--accent); min-width:42px; text-align:right; }
+.vbar { display:inline-block; height:8px; border-radius:2px; opacity:.75; background:var(--lmul-none); }
+.vbar-m1 { background:var(--lmul-m1); } .vbar-m2 { background:var(--lmul-m2); }
+.vbar-m4 { background:var(--lmul-m4); } .vbar-m8 { background:var(--lmul-m8); }
+.vbar-mf2 { background:var(--lmul-mf2); } .vbar-mf4 { background:var(--lmul-mf4); }
+.vbar-mf8 { background:var(--lmul-mf8); } .vbar-none { background:var(--lmul-none); }
+.vbin-cnt { color:var(--dim); }
+/* Fixed top-right hover panel: shows the SEW/LMUL/VL/exec of the vector op the
+   pointer is over, so per-op VL info is visible even when the controlling
+   vsetvl* is off-screen. Updated by annotate_hover.js. */
+/* Both hover panels share one fixed top-right column so they can never overlap
+   however tall either grows. */
+/* Fixed at 28% of the viewport width, not fit-to-content: the panels are
+   refilled on every hover, and a width that tracked their contents would jitter
+   from row to row. `align-items:stretch` makes both panels take the full column
+   width so their edges line up. */
+.hover-stack { position:fixed; top:12px; right:12px; z-index:30;
+  display:flex; flex-direction:column; align-items:stretch; gap:8px;
+  width:20vw; pointer-events:none; }
+.vhover-panel { width:100%; box-sizing:border-box;
+  background:var(--surface); border:1px solid var(--border); border-radius:6px;
+  padding:8px 11px; font-size:12px; box-shadow:0 2px 10px rgba(0,0,0,.35); }
+.vhover-title { color:var(--dim); font-size:10px; text-transform:uppercase;
+  letter-spacing:.06em; margin-bottom:5px; }
+.vhover-ins { color:var(--accent); margin-bottom:6px; white-space:normal; word-break:break-all; }
+.vhover-grid { display:grid; grid-template-columns:auto 1fr; gap:1px 12px; }
+.vhover-grid span { color:var(--dim); }
+.vhover-grid b { text-align:right; font-weight:600; color:var(--text); }
+.vhover-empty { color:var(--dim); }
+.vhover-sub { color:var(--dim); font-size:10px; margin:8px 0 3px;
+  border-top:1px solid var(--border); padding-top:6px; }
+.vhover-panel .vhist { white-space:normal; }
+/* Two-bar cache infographic (see cacheBars in annotate_hover.js). Both tracks are the
+   same width and share one axis, so the bars are directly comparable by eye;
+   the fixed-width label and rate columns keep the track edges aligned. */
+.cbar { display:flex; flex-direction:column; gap:3px; }
+.cbar-row { display:flex; align-items:center; gap:7px; line-height:1; }
+.cbar-lbl { color:var(--dim); font-size:10px; min-width:14px; }
+.cbar-track { flex:1; min-width:90px; display:flex; height:7px;
+  border-radius:2px; overflow:hidden;
+  background:color-mix(in srgb, var(--dim) 22%, transparent); }
+.cbar-hit { background:var(--green); }
+.cbar-miss { background:var(--red); }
+.cbar-rate { color:var(--text); font-size:10px; min-width:36px; text-align:right; }
+.cbar-key { display:flex; align-items:center; gap:4px; margin-top:1px;
+  color:var(--dim); font-size:9px; }
+.cbar-key i { width:7px; height:7px; border-radius:2px; }
+.cbar-key i + i { margin-left:5px; }
+/* The [branch N ↑/↓] tag itself is the jump link. */
+a.brj { text-decoration:none; cursor:pointer; }
+a.brj:hover .tag-branch { text-decoration:underline; }
+/* Rows that are branch/jump targets get a subtle orange left rule at rest. */
+tr.asm.bt td:first-child { box-shadow: inset 2px 0 0 var(--orange); }
+/* Hover band so a row reads cleanly across all columns (matches the hotspots
+   page). Lower priority than :target/arrow-hl below, which stay orange. */
+tr.asm:hover td { background: color-mix(in srgb, var(--accent) 14%, transparent); }
+/* Loop region highlight, applied when arriving from the hotspots page
+   (?region=start-end): a subtle band over the body and a strong orange rule +
+   fill on the start (loop head) and end (back-edge branch) rows. */
+tr.asm.region-band td { background: color-mix(in srgb, var(--accent) 8%, transparent); }
+tr.asm.region-edge td { background: color-mix(in srgb, var(--orange) 26%, transparent); }
+tr.asm.region-edge td:first-child { box-shadow: inset 3px 0 0 var(--orange); }
+/* Click-to-jump lands here (:target); hovering a branch tag highlights it too. */
+tr.asm:target td, tr.asm.arrow-hl td { background: color-mix(in srgb, var(--orange) 22%, transparent); }
+/* Single hover-drawn arrow overlay (one curve + head at a time). */
+#br-arrow { position:fixed; inset:0; width:100vw; height:100vh; pointer-events:none; z-index:50; }
+#br-arrow .br-line { fill:none; stroke:var(--orange); stroke-width:1.5; opacity:.9; }
+/* Column-title header row. */
+.col-header td { color:var(--dim); font-weight:700; text-transform:uppercase; letter-spacing:.04em; font-size:10px; border-bottom:1px solid var(--border); padding-bottom:3px; }
+/* Toolbar (e.g. the hide-source toggle). */
+.toolbar { margin:.4rem 0 1rem; display:flex; gap:.5rem; }
+.toolbar button { background:var(--surface); color:var(--text); border:1px solid var(--border); border-radius:4px; padding:4px 10px; font:inherit; font-size:12px; cursor:pointer; }
+.toolbar button:hover { border-color:var(--accent); color:var(--accent); }
+/* "Hide source" toggle: class lives on <html> (set pre-paint, like the theme)
+   so there is no flash of source rows before the script runs. */
+html.hide-src tr.src { display:none; }
+/* Off-screen row chunks skip layout + paint entirely (content-visibility),
+   so multi-hundred-thousand-row pages scroll smoothly and the hide-source
+   toggle only reflows the on-screen chunks. `auto <h>` seeds an estimated
+   height for scrollbar sizing; the browser stores each chunk's real height
+   after it first renders. The first tbody chunk is left rendered (no class)
+   to anchor the auto-layout column widths, so columns don't jitter on scroll. */
+tbody.chunk { content-visibility:auto; contain-intrinsic-size:auto 6000px; }
