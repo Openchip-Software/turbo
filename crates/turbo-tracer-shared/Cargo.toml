@@ -3,7 +3,7 @@ name = "turbo-tracer-shared"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
-license = "MIT"
+license = "Apache-2.0 OR MIT"
 
 [lib]
 # this crate is a Rust library, allowing other Rust libraries to link
