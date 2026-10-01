@@ -1,0 +1,32 @@
+name: Cargo Build & Test
+
+on:
+  push:
+  pull_request:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build_and_test:
+    name: rust build
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        toolchain:
+          - stable
+    steps:
+      - uses: actions/checkout@v6
+      - run: rustup update ${{ matrix.toolchain }} && rustup default ${{ matrix.toolchain }}
+
+      # synthetto's build script (prost) needs protoc, and .cargo/config.toml links
+      # with lld; ubuntu-latest ships neither
+      - run: sudo apt-get update && sudo apt-get install -y protobuf-compiler lld
+
+      # Workspace depends on a patched riscv-isa crate under third-party/,
+      # which must be fetched before any cargo command can resolve the patch.
+      - run: ./third-party/initialize_dependency.sh
+
+      # Normal Rust builds
+      - run: cargo build --verbose
+      - run: cargo build -p turbo-tracer --verbose
