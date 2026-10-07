@@ -1163,7 +1163,15 @@ function onRoisData(payload) {
     buildTable("roi-scroll", "tbl-rois", state.rois, state.sort.rois);
 }
 
+function onMachineData(payload) {
+    var vlen = payload && payload.vlen_bits ? payload.vlen_bits : null;
+    if (vlen === _vlenBits) return;
+    _vlenBits = vlen;
+    redrawHistogramsForTheme();
+}
+
 const DATA_HANDLERS = {
+    machine: onMachineData,
     functions: onFunctionsData,
     rois: onRoisData,
 };
@@ -1233,6 +1241,29 @@ const LMUL_LABELS = {
 };
 
 const SEW_BASES = ["e8", "e16", "e32", "e64"];
+const SEW_BITS = { e8: 8, e16: 16, e32: 32, e64: 64 };
+// LMUL as [numerator, denominator], so fractional LMUL stays integer maths
+const LMUL_RATIO = {
+    m1: [1, 1],
+    m2: [2, 1],
+    m4: [4, 1],
+    m8: [8, 1],
+    mf2: [1, 2],
+    mf4: [1, 4],
+    mf8: [1, 8],
+};
+
+/* Modelled VLEN in bits, from the server's "machine" SSE item. null until it
+   arrives (or for a perf_data_final.json written before it was recorded). */
+let _vlenBits = null;
+
+/* VLMAX = VLEN * LMUL / SEW: the most elements this SEW/LMUL can process,
+   i.e. the right-hand end of the histogram's x axis. null when VLEN is unknown. */
+function histVlmax(field) {
+    if (!_vlenBits) return null;
+    var r = LMUL_RATIO[field.lmulKey];
+    return Math.floor((_vlenBits * r[0]) / (r[1] * SEW_BITS[field.sewGroup]));
+}
 
 /* Build HIST_FIELDS: one chart per SEW x LMUL combination.
    Only entries whose _raw data is non-empty will render.    */
@@ -1326,10 +1357,12 @@ function _drawHistogramOnCanvas(canvas, row, field) {
 
     var w = cssW;
     var h = cssH;
+    // Larger text when drawn big (the zoom overlay)
+    var fontPx = h >= 300 ? 13 : 9;
     var padL = 8,
         padR = 8,
-        padT = 18,
-        padB = 22;
+        padT = fontPx + 9,
+        padB = fontPx + 13;
     var chartW = w - padL - padR;
     var chartH = h - padT - padB;
 
@@ -1358,16 +1391,37 @@ function _drawHistogramOnCanvas(canvas, row, field) {
         return [];
     }
 
-    var bars = [];
-    var maxCount = 0;
-    var i;
-
     var sorted = rawData.slice().sort(function (a, b) {
         return a[0] - b[0];
     });
+
+    /* The x axis always spans 0..VLMAX, never just the VLs present, so a
+       histogram piled up on the right means the vector unit is well used.
+       Should a VL ever exceed VLMAX (VLEN unknown, or a mismatched run),
+       stretch the axis rather than drop it. */
+    var vlmax = histVlmax(field);
+    var axisMax = sorted[sorted.length - 1][0];
+    if (vlmax !== null && vlmax > axisMax) axisMax = vlmax;
+    if (axisMax < 1) axisMax = 1;
+
+    /* One column per VL while they stay at least 3px wide; past that,
+       power-of-two buckets, each covering (i*size, (i+1)*size] so the
+       rightmost one ends exactly at VLMAX (VL 0 joins the first bucket). */
+    var maxCols = Math.max(1, Math.floor(chartW / 3));
+    var bucket = 1;
+    while ((axisMax + 1) / bucket > maxCols) bucket *= 2;
+    var n = bucket === 1 ? axisMax + 1 : Math.ceil(axisMax / bucket);
+    var counts = new Array(n).fill(0);
+    var i;
     for (i = 0; i < sorted.length; i++) {
-        if (sorted[i][1] > maxCount) maxCount = sorted[i][1];
+        var vl = sorted[i][0];
+        var col =
+            bucket === 1 ? vl : vl === 0 ? 0 : Math.ceil(vl / bucket) - 1;
+        counts[col] += sorted[i][1];
     }
+
+    var maxCount = 0;
+    for (i = 0; i < n; i++) if (counts[i] > maxCount) maxCount = counts[i];
     if (maxCount === 0) {
         ctx.fillStyle = dimColor;
         ctx.font = "11px sans-serif";
@@ -1376,19 +1430,27 @@ function _drawHistogramOnCanvas(canvas, row, field) {
         ctx.fillText("All zeros", w / 2, h / 2);
         return [];
     }
-    var n = sorted.length;
+
+    var bars = [];
     var colW = chartW / n;
     var gap = Math.min(2, colW * 0.1);
     for (i = 0; i < n; i++) {
+        var lo = bucket === 1 ? i : i === 0 ? 0 : i * bucket + 1;
+        var hi = bucket === 1 ? i : Math.min((i + 1) * bucket, axisMax);
         bars.push({
             colStart: i * colW,
             colEnd: (i + 1) * colW,
             barX: padL + i * colW + gap / 2,
             barW: Math.max(1, colW - gap),
-            fraction: sorted[i][1] / maxCount,
-            count: sorted[i][1],
-            label: String(sorted[i][0]),
+            fraction: counts[i] / maxCount,
+            count: counts[i],
+            label: lo === hi ? String(lo) : lo + "\u2013" + hi,
         });
+    }
+
+    // x position (chart-relative) of a VL value on this axis
+    function xOfVl(v) {
+        return bucket === 1 ? (v + 0.5) * colW : (v / axisMax) * chartW;
     }
 
     // Horizontal gridlines at 100% and 50%
@@ -1409,7 +1471,7 @@ function _drawHistogramOnCanvas(canvas, row, field) {
     var hoveredIdx = canvas._hoveredIdx !== undefined ? canvas._hoveredIdx : -1;
     for (i = 0; i < bars.length; i++) {
         if (bars[i].count === 0) continue;
-        var barH = bars[i].fraction * chartH;
+        var barH = Math.max(1, bars[i].fraction * chartH);
         var barY = padT + chartH - barH;
         if (i === hoveredIdx) {
             ctx.fillStyle = "#c0e8ff";
@@ -1422,26 +1484,40 @@ function _drawHistogramOnCanvas(canvas, row, field) {
     }
     ctx.globalAlpha = 1.0;
 
-    // X-axis tick labels (only when column wide enough)
+    // Fixed x-axis ticks at 0, 1/4, 1/2, 3/4 and the axis end (VLMAX)
+    ctx.strokeStyle = borderColor;
+    ctx.lineWidth = 1;
     ctx.fillStyle = dimColor;
-    ctx.font = "9px sans-serif";
-    ctx.textAlign = "center";
+    ctx.font = fontPx + "px sans-serif";
     ctx.textBaseline = "top";
-    var minColForLabel = 28;
-    for (i = 0; i < bars.length; i++) {
-        if (bars[i].count === 0) continue;
-        var cw = bars[i].colEnd - bars[i].colStart;
-        if (cw < minColForLabel) continue;
-        var labelX = padL + (bars[i].colStart + bars[i].colEnd) / 2;
-        ctx.fillText(bars[i].label, labelX, padT + chartH + 3);
+    var lastLabelX = -Infinity;
+    for (var q = 0; q <= 4; q++) {
+        var tv = Math.round((axisMax * q) / 4);
+        var tx = padL + xOfVl(tv);
+        ctx.beginPath();
+        ctx.moveTo(tx, padT + chartH);
+        ctx.lineTo(tx, padT + chartH + 3);
+        ctx.stroke();
+        if (tx - lastLabelX < fontPx * 4) continue;
+        ctx.textAlign = q === 0 ? "left" : q === 4 ? "right" : "center";
+        ctx.fillText(String(tv), q === 0 ? padL : q === 4 ? padL + chartW : tx, padT + chartH + 5);
+        lastLabelX = tx;
     }
 
-    // Max count label top-left
+    // Max count label top-left, VLMAX top-right
     ctx.fillStyle = dimColor;
-    ctx.font = "9px sans-serif";
+    ctx.font = fontPx + "px sans-serif";
     ctx.textAlign = "left";
     ctx.textBaseline = "top";
     ctx.fillText("max:" + fmtInt(maxCount), padL, 2);
+    ctx.textAlign = "right";
+    ctx.fillText(
+        vlmax !== null
+            ? "VLMAX " + fmtInt(vlmax) + " (VLEN " + fmtInt(_vlenBits) + ")"
+            : "VLEN unknown: axis scaled to data",
+        padL + chartW,
+        2,
+    );
 
     return bars;
 }
@@ -1594,9 +1670,112 @@ function drawAndBindHistogram(canvas, row, field) {
     });
 }
 
+/* ---------- Histogram zoom overlay ----------
+   Clicking a histogram opens it full screen; Escape, the close button or a
+   click on the backdrop dismisses it. One overlay, built on first use, whose
+   canvas is re-pointed at whichever histogram was clicked. */
+let _zoom = null;
+
+function _getZoom() {
+    if (_zoom) return _zoom;
+    var overlay = document.createElement("div");
+    overlay.className = "histogram-zoom";
+    overlay.setAttribute("role", "dialog");
+    overlay.setAttribute("aria-modal", "true");
+    var panel = document.createElement("div");
+    panel.className = "histogram-zoom-panel";
+    var head = document.createElement("div");
+    head.className = "histogram-zoom-head";
+    var title = document.createElement("div");
+    title.className = "histogram-title";
+    var close = document.createElement("button");
+    close.className = "histogram-zoom-close";
+    close.type = "button";
+    close.title = "Close (Esc)";
+    close.textContent = "\u2715 Esc";
+    var summary = document.createElement("div");
+    summary.className = "histogram-summary";
+    var canvas = document.createElement("canvas");
+    canvas.className = "histogram-zoom-canvas";
+    canvas.setAttribute("role", "img");
+    head.appendChild(title);
+    head.appendChild(close);
+    panel.appendChild(head);
+    panel.appendChild(canvas);
+    panel.appendChild(summary);
+    overlay.appendChild(panel);
+    document.body.appendChild(overlay);
+
+    close.addEventListener("click", closeHistogramZoom);
+    overlay.addEventListener("click", function (e) {
+        if (e.target === overlay) closeHistogramZoom();
+    });
+    window.addEventListener("resize", function () {
+        if (_zoomOpen()) _refreshZoom(null);
+    });
+
+    _zoom = { overlay: overlay, title: title, summary: summary, canvas: canvas };
+    return _zoom;
+}
+
+function _zoomOpen() {
+    return !!_zoom && _zoom.overlay.classList.contains("visible");
+}
+
+/* Redraw the open zoom overlay, optionally against a fresher `row` (a live
+   update or detail-pane rebuild for the same ROI). */
+function _refreshZoom(row) {
+    if (!_zoomOpen()) return;
+    var cv = _zoom.canvas;
+    if (row) cv._row = row;
+    var stats = computeSparseStats(cv._row[cv._field.rawKey]);
+    _zoom.summary.textContent =
+        "Avg: " + fmtFloat(stats.mean) +
+        "   Max: " + fmtInt(stats.max) +
+        "   Total: " + fmtInt(stats.total) +
+        "   p50: " + fmtInt(stats.p50) +
+        "   p95: " + fmtInt(stats.p95);
+    cv._bars = _drawHistogramOnCanvas(cv, cv._row, cv._field);
+}
+
+function openHistogramZoom(src) {
+    var z = _getZoom();
+    z.title.textContent = src._field.label;
+    z.canvas.setAttribute(
+        "aria-label",
+        src._field.label + " distribution histogram",
+    );
+    getTooltip().classList.remove("visible");
+    z.overlay.classList.add("visible");
+    if (z.canvas._field) {
+        z.canvas._row = src._row;
+        z.canvas._field = src._field;
+        z.canvas._hoveredIdx = -1;
+    } else {
+        drawAndBindHistogram(z.canvas, src._row, src._field);
+    }
+    _refreshZoom(null);
+}
+
+function closeHistogramZoom() {
+    if (!_zoomOpen()) return;
+    _zoom.overlay.classList.remove("visible");
+    getTooltip().classList.remove("visible");
+    if (_hoveredCanvas === _zoom.canvas) _hoveredCanvas = null;
+}
+
+document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape" && _zoomOpen()) {
+        e.preventDefault();
+        e.stopPropagation();
+        closeHistogramZoom();
+    }
+});
+
 function renderDetailPane(row, dataKey) {
     var content = byId("detail-content");
     if (!row) {
+        closeHistogramZoom();
         content.innerHTML =
             '<div class="detail-placeholder">Select a ROI or Function to view detailed histogram information</div>';
         state._detailPaneName = null;
@@ -1855,8 +2034,12 @@ function _buildDetailPaneFull(content, row, dataKey) {
         var idx = parseInt(cv.getAttribute("data-idx"), 10);
         if (idx >= 0 && idx < HIST_FIELDS.length) {
             drawAndBindHistogram(cv, row, HIST_FIELDS[idx]);
+            cv.addEventListener("click", function () {
+                openHistogramZoom(this);
+            });
         }
     }
+    _refreshZoom(row);
 }
 
 /* In-place detail pane update -- only touches changed values */
@@ -1925,6 +2108,7 @@ function _updateDetailPaneInPlace(content, row) {
         cv._row = row;
         cv._bars = _drawHistogramOnCanvas(cv, row, cv._field);
     }
+    _refreshZoom(row);
 
     // If a tooltip is currently shown over one of these histograms, refresh
     // its text to reflect the newly redrawn data.
@@ -2066,6 +2250,7 @@ function redrawHistogramsForTheme() {
             cv._bars = _drawHistogramOnCanvas(cv, cv._row, cv._field);
         }
     }
+    _refreshZoom(null);
 }
 
 window

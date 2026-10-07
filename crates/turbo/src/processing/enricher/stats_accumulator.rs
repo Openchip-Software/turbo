@@ -13,7 +13,7 @@
 //! [`RegionTracker`](super::region_tracker::RegionTracker); resolving markers to
 //! those ids is [`marker_handler`](super::marker_handler)'s job.
 
-use crate::common::{InsnDelta, PerformanceData, RoiInfo};
+use crate::common::{InsnDelta, PerformanceData, RoiInfo, SYSTEM_VLEN};
 use rustc_hash::FxHashMap;
 
 /// Manages accumulation of ROI statistics across functions, ROI regions, and global scope.
@@ -348,6 +348,9 @@ impl StatsAccumulator {
             functions: all_funcs,
             // trace info only available after trace has been decoded
             trace_info: None,
+            vlen_bits: SYSTEM_VLEN
+                .is_set()
+                .then(|| SYSTEM_VLEN.get_bytes() as u32 * 8),
         }
     }
 

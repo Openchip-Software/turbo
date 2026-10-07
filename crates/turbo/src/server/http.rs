@@ -421,6 +421,9 @@ async fn sse_handler(
             // funcs_sorted.first().inspect(|r| println!("{r:?}"));
 
             let sse_data = SseData::new(vec![
+                DataType::Machine {
+                    vlen_bits: data.vlen_bits,
+                },
                 DataType::Functions { functions },
                 DataType::Rois {
                     rois: data.rois.clone(),
