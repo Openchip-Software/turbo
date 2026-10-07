@@ -286,6 +286,73 @@ body {
     border-radius: 4px;
 }
 
+.histogram-canvas[data-idx] {
+    cursor: zoom-in;
+}
+
+/* Full-screen view of one histogram, opened by clicking it */
+.histogram-zoom {
+    position: fixed;
+    inset: 0;
+    z-index: 900; /* under .histogram-tooltip */
+    display: none;
+    padding: 3vh 3vw;
+    box-sizing: border-box;
+    background: rgba(0, 0, 0, 0.6);
+}
+
+.histogram-zoom.visible {
+    display: flex;
+}
+
+.histogram-zoom-panel {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    padding: 16px 20px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+.histogram-zoom-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+}
+
+.histogram-zoom-head .histogram-title {
+    font-size: 1.1rem;
+    margin-bottom: 0;
+}
+
+.histogram-zoom-close {
+    padding: 4px 10px;
+    font-size: 0.8rem;
+    color: var(--text);
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.histogram-zoom-canvas {
+    flex: 1;
+    min-height: 0;
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+}
+
+.histogram-zoom .histogram-summary {
+    font-size: 0.9rem;
+    white-space: pre;
+}
+
 .histogram-summary {
     display: flex;
     flex-wrap: wrap;

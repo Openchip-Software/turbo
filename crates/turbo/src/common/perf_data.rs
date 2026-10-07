@@ -11,6 +11,11 @@ pub struct PerformanceData {
     pub rois: Vec<RoiInfo>,
     pub functions: Vec<RoiInfo>,
     pub trace_info: Option<TraceMetadata>,
+    /// VLEN in bits the run modelled, so the UI can draw each VL histogram over
+    /// its full `0..=VLMAX` range (`VLEN * LMUL / SEW`) instead of scaling to
+    /// the data. `None` in a `perf_data*.json` written before this existed.
+    #[serde(default)]
+    pub vlen_bits: Option<u32>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default, JsonSchema)]

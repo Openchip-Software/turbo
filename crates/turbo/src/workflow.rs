@@ -253,6 +253,7 @@ pub(crate) fn merge_perf_data(parts: impl Iterator<Item = PerformanceData>) -> P
     let mut roi_idx: std::collections::HashMap<Arc<str>, usize> = std::collections::HashMap::new();
     let mut func_idx: std::collections::HashMap<Arc<str>, usize> = std::collections::HashMap::new();
     for pd in parts {
+        merged.vlen_bits = merged.vlen_bits.or(pd.vlen_bits);
         // Merge ROIs (ROI regions)
         for roi in pd.rois {
             match roi_idx.get(&roi.name) {
