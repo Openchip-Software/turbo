@@ -6,11 +6,16 @@
     if(!svg){ svg=document.createElementNS(NS,"svg"); svg.id="br-arrow"; document.body.appendChild(svg); }
     clear(); dst.classList.add("arrow-hl");
     var ins=dst.querySelector("td.ins")||dst;
-    var r1=a.getBoundingClientRect(), r2=ins.getBoundingClientRect();
+    // Measure the instruction *text*, not the cell: cells are
+    // vertical-align:bottom, so a row made tall by another column (e.g. a VL
+    // histogram) leaves the text at the bottom, far from the cell's centre.
+    var rng=document.createRange(); rng.selectNodeContents(ins);
+    var rs=rng.getClientRects();
+    var r1=a.getBoundingClientRect(), r2=rs.length?rs[0]:ins.getBoundingClientRect();
     // The instruction column is the rightmost, width:100% column, so its text
     // is left-aligned at r2.left -- aim the arrowhead there (start of the
-    // disassembly text), not r2.right (the far page edge).
-    var x1=r1.right, y1=r1.top+r1.height/2, x2=r2.left, y2=r2.top+r2.height/2;
+    // disassembly text, less a small gap), not r2.right (the far page edge).
+    var x1=r1.right, y1=r1.top+r1.height/2, x2=r2.left-4, y2=r2.top+r2.height/2;
     // Smooth S-connector: both control points give a horizontal *forward*
     // (rightward) tangent -- the curve leaves the right of the [branch] box
     // heading toward the code, and arrives into the instruction from the left
