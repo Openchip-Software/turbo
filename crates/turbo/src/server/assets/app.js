@@ -176,6 +176,10 @@ const state = {
         rois: { colIdx: 1, dir: "desc" },
     },
     filter: { functions: "", rois: "" },
+    /* How many functions the table may show. The server always sends every
+       function (see `sse_handler`); this is a pure view limit, applied to the
+       hottest rows by the column currently sorted on. "all" shows everything. */
+    fnLimit: 50,
     /* Sort result cache -- only re-sort when data or sort config changes */
     _sortedFunctionsKey: "",
     _sortedFunctions: [],
@@ -375,7 +379,12 @@ function preprocessRow(row) {
    implicitly invalidated on every SSE update.
    ------------------------------------------------------------- */
 function getSortedRows(dataKey, rows, sortState) {
-    const cacheKey = sortState.colIdx + ":" + sortState.dir + ":" + rows.length;
+    /* The row limit is part of the cached pipeline's output (see
+       `getFilteredRows` use in `buildTable`), so a dropdown change must miss
+       the cache even though the rows and the sort config are unchanged. */
+    const limitTag = dataKey === "functions" ? ":" + state.fnLimit : "";
+    const cacheKey =
+        sortState.colIdx + ":" + sortState.dir + ":" + rows.length + limitTag;
     const keyProp =
         "_sorted" + dataKey.charAt(0).toUpperCase() + dataKey.slice(1) + "Key";
     const arrProp =
@@ -429,6 +438,20 @@ function getFilteredRows(dataKey, sorted) {
             String(name).toLowerCase().indexOf(filterText) !== -1
         );
     });
+}
+
+/* -------------------------------------------------------------
+   ROW LIMIT
+   Applied AFTER the sort and BEFORE the name filter, so "top 50" always
+   means the 50 hottest rows by whichever column is sorted on. Cutting the
+   other way round would make the limit interact with the filter box, and a
+   cold function typed into the filter would vanish.
+   ------------------------------------------------------------- */
+function applyRowLimit(dataKey, sorted) {
+    if (dataKey !== "functions") return sorted;
+    const limit = state.fnLimit;
+    if (!Number.isFinite(limit) || sorted.length <= limit) return sorted;
+    return sorted.slice(0, limit);
 }
 
 /* Format a single cell value -- returns { text, html }.
@@ -642,7 +665,23 @@ function buildTable(containerId, tableId, rows, sortState) {
     const dataKey = containerId === "fn-scroll" ? "functions" : "rois";
     const colCount = COLS.length;
     const sorted = getSortedRows(dataKey, rows, sortState);
-    const filtered = getFilteredRows(dataKey, sorted);
+    const limited = applyRowLimit(dataKey, sorted);
+    const filtered = getFilteredRows(dataKey, limited);
+
+    /* Say how many rows are shown out of how many were received. Written here
+       rather than in the SSE handler so it can never disagree with the table
+       (and stays correct across a frozen table or a dropdown change). */
+    if (dataKey === "functions") {
+        const info = byId("fn-info");
+        if (info) {
+            info.textContent = filtered.length < rows.length
+                ? _intFmt.format(filtered.length) +
+                  " of " +
+                  _intFmt.format(rows.length) +
+                  " functions"
+                : _intFmt.format(rows.length) + " rows";
+        }
+    }
 
     /* -- Build or reuse the <table> skeleton -- */
     let tbl = byId(tableId);
@@ -801,6 +840,10 @@ function handleSort(containerId, tableId, colIdx) {
 /* -------------------------------------------------------------
    FILTER INPUT HANDLING
    ------------------------------------------------------------- */
+/* A name typed into the filter box that the row limit excludes is not a dead
+   end: lift the limit so the filter can reach the whole set. The user is
+   looking for one specific function, and leaving it hidden would look like the
+   function does not exist. */
 function setupFilter(inputId, containerId, tableId, dataKey) {
     const input = byId(inputId);
     if (!input) return;
@@ -809,6 +852,11 @@ function setupFilter(inputId, containerId, tableId, dataKey) {
         clearTimeout(debounceTimer);
         debounceTimer = setTimeout(() => {
             state.filter[dataKey] = input.value;
+            /* Keep the dropdown in sync with what the table is actually
+               showing: once there is filter text the name match runs over the
+               whole set, which the dropdown cannot express. */
+            if (dataKey === "functions" && input.value.trim() !== "")
+                widenFnLimit();
             if (state[dataKey].length > 0) {
                 buildTable(
                     containerId,
@@ -823,6 +871,45 @@ function setupFilter(inputId, containerId, tableId, dataKey) {
 
 setupFilter("fn-filter", "fn-scroll", "tbl-functions", "functions");
 setupFilter("roi-filter", "roi-scroll", "tbl-rois", "rois");
+
+/* -------------------------------------------------------------
+   FUNCTIONS ROW-LIMIT DROPDOWN
+   ------------------------------------------------------------- */
+function setupFnLimit() {
+    const sel = readFnLimit();
+    if (!sel) return;
+    sel.addEventListener("change", () => {
+        readFnLimit();
+        if (state.functions.length > 0) {
+            buildTable(
+                "fn-scroll",
+                "tbl-functions",
+                state.functions,
+                state.sort.functions,
+            );
+        }
+    });
+}
+
+/* Parse the dropdown into `state.fnLimit`. Any non-numeric value ("all") means
+   unlimited. */
+function readFnLimit() {
+    const sel = byId("fn-limit");
+    const v = sel ? parseInt(sel.value, 10) : NaN;
+    state.fnLimit = Number.isFinite(v) ? v : Infinity;
+    return sel;
+}
+
+/* Switch the dropdown to ALL (reusing the user's own change path, so the
+   select and the table can never disagree). */
+function widenFnLimit() {
+    const sel = byId("fn-limit");
+    if (!sel || sel.value === "all") return;
+    sel.value = "all";
+    sel.dispatchEvent(new Event("change"));
+}
+
+setupFnLimit();
 
 /* -------------------------------------------------------------
    FREEZE
@@ -1114,8 +1201,8 @@ function onFunctionsData(payload) {
 
     const ph = byId("fn-placeholder");
     if (ph) ph.style.display = "none";
-    byId("fn-info").textContent =
-        _intFmt.format(payload.functions.length) + " rows";
+    /* The row-count readout is written by buildTable(), which is the only place
+       that knows the limit + name filter result. */
     buildTable(
         "fn-scroll",
         "tbl-functions",

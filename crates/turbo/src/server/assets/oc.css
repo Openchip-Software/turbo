@@ -832,6 +832,22 @@ html[data-theme="light"] .theme-pill::after {
 .tbl-filter::placeholder {
     color: var(--dim);
 }
+/* Row-limit dropdown, matched to .tbl-filter so the toolbar reads as one
+   control group. */
+.tbl-select {
+    padding: 3px 6px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--surface);
+    color: var(--text);
+    font-size: 0.8rem;
+    font-family: inherit;
+    outline: none;
+    cursor: pointer;
+}
+.tbl-select:focus {
+    border-color: var(--accent);
+}
 .tbl-info {
     margin-left: auto;
     font-size: 0.8rem;

@@ -414,11 +414,20 @@ async fn sse_handler(
             let _res = latest_data.changed().await;
             let data = latest_data.borrow_and_update();
 
-            // drop all but the top 50 funcs by instruction count?
-            let mut functions = data.functions.clone();
-            functions.sort_by_key(|f| std::cmp::Reverse(f.instructions));
-            functions.truncate(50);
-            // funcs_sorted.first().inspect(|r| println!("{r:?}"));
+            // Send EVERY function, in whatever order the aggregation produced.
+            //
+            // The dashboard's table is virtually scrolled, so the DOM cost is the
+            // visible slice regardless of payload size, and the client needs the
+            // full set: it sorts client-side (`getSortedRows`), so dropping or
+            // pre-ordering rows here makes sorting by any column other than
+            // instructions -- and filtering by name -- silently wrong.
+            //
+            // There is deliberately no sort here. `getSortedRows` always misses its
+            // cache on the first payload (`_sortedFunctionsKey` starts empty), so
+            // the client re-sorts before painting a single row and the wire order
+            // is never observable. How many rows to show is a view concern and
+            // lives in the frontend (`fn-limit` dropdown).
+            let functions = data.functions.clone();
 
             let sse_data = SseData::new(vec![
                 DataType::Machine {
