@@ -281,8 +281,7 @@ pub enum Command {
     },
 
     /// Decode a recorded trace file and enrich it, writing report files
-    /// (perf_data_final.json, annotate_*.html.gz, ...) to disk. Never starts
-    /// the web server.
+    /// (perf_data_final.json, annotate_*.html.gz, ...) to disk.
     Process {
         #[command(flatten)]
         common: CommonArgs,
@@ -309,12 +308,8 @@ pub enum Command {
         trace_input: PathBuf,
     },
 
-    /// Report what recorded trace files are made of, without decoding or
-    /// enriching anything: on-disk vs uncompressed size and the achieved
-    /// compression, the per-category byte breakdown, duplicate dictionary
-    /// entries, and the hottest blocks. Harts are inspected in parallel; the
-    /// combined whole-run report is logged at info, one line per hart at debug,
-    /// and each hart's full report at trace.
+    /// Report what recorded trace files are comprised of, on-disk vs uncompressed size
+    /// and other metadata about the trace files.
     Inspect {
         /// Recorded spool directory, or a single `turbo_trace_vcpu<N>.bin`
         /// record log. A directory inspects EVERY hart it contains.
