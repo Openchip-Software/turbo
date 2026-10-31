@@ -89,6 +89,8 @@ use qemu_plugin::{PluginU64, Scoreboard};
 mod trace_encoder;
 use trace_encoder::*;
 
+mod syscall_watch;
+use syscall_watch::SyscallWatch;
 mod vl_compute;
 use vl_compute::{
     compute_vl, decode_vsetvl, decode_vsetvl_static_sew, vlmax_from_vtype, VlPlan, VsetvlForm,
@@ -536,12 +538,6 @@ fn detect_roi_from_instruction_bytes(insn_bytes: &[u8]) -> Option<(RoiRtMarkerKi
     let rs2 = ((raw >> 20) & 0x1f) as u8;
     Some((kind, rs1, rs2))
 }
-
-// RISC-V (asm-generic) syscall numbers used for shared-object mapping discovery.
-// RISC-V has no `open`/`mmap2`; the loader uses `openat` + `mmap`.
-const SYS_OPENAT: i64 = 56;
-const SYS_CLOSE: i64 = 57;
-const SYS_MMAP: i64 = 222;
 
 // ---------------------------------------------------------------------------
 // Lock-free per-vCPU storage
@@ -1279,22 +1275,6 @@ struct TurboTracePlugin {
     /// without re-querying the QEMU plugin API. `None` until the first vCPU
     /// init.
     meminfo: Option<turbo_tracer_shared::MemMapInfo>,
-
-    // --- Shared-object mapping discovery via guest openat/mmap syscalls ---
-    // These are mutated only from on_syscall/on_syscall_return, which the crate
-    // dispatches under the global plugin mutex, so plain maps (no locking) are
-    // safe here. Not touched by the lock-free per-instruction hot path.
-    /// Open file descriptors observed via `openat`: fd -> guest path. Cleared on
-    /// `close` so a later reuse of the same fd number is attributed correctly.
-    open_fds: std::collections::HashMap<i64, String>,
-    /// Per-vCPU `openat` path captured at syscall entry, resolved to its fd on
-    /// syscall return.
-    pending_openat: std::collections::HashMap<VCPUIndex, String>,
-    /// Per-vCPU `(fd, offset)` captured at `mmap` entry, resolved to a base
-    /// address on syscall return.
-    pending_mmap: std::collections::HashMap<VCPUIndex, (i64, u64)>,
-    /// Discovered shared objects: guest path -> runtime load base.
-    lib_mappings: std::collections::HashMap<String, u64>,
 }
 
 // ---------------------------------------------------------------------------
@@ -1401,10 +1381,6 @@ impl Default for TurboTracePlugin {
             vl_verify: VlVerify::Abort,
             mem_capture: true,
             meminfo: None,
-            open_fds: std::collections::HashMap::new(),
-            pending_openat: std::collections::HashMap::new(),
-            pending_mmap: std::collections::HashMap::new(),
-            lib_mappings: std::collections::HashMap::new(),
         }
     }
 }
@@ -1412,7 +1388,7 @@ impl Default for TurboTracePlugin {
 impl Register for TurboTracePlugin {
     fn register(
         &mut self,
-        _id: PluginId,
+        id: PluginId,
         args: &qemu_plugin::install::Args,
         _info: &qemu_plugin::install::Info,
     ) -> Result<()> {
@@ -1584,6 +1560,7 @@ impl Register for TurboTracePlugin {
         self.debug_enabled = debug_enabled;
         self.vl_verify = vl_verify;
         self.mem_capture = mem_capture;
+        SyscallWatch::install(id, self.per_vcpu_data.clone());
 
         Ok(())
     }
@@ -1743,48 +1720,13 @@ impl TurboTracePlugin {
         }
     }
 
-    /// Read a NUL-terminated guest C string at `ptr` on vCPU `vcpu`. The exact
-    /// readable length is unknown, so try progressively smaller reads (a long
-    /// path near the end of a mapping would fail an over-long all-or-nothing
-    /// read); truncate at the first NUL.
-    fn read_guest_cstr(&self, vcpu: VCPUIndex, ptr: u64) -> Option<String> {
-        if ptr == 0 {
-            return None;
-        }
-        let pvd = self.per_vcpu_data.clone();
-        // SAFETY: on_syscall runs on this vCPU's own thread.
-        let d = unsafe { pvd.get_mut(vcpu) }?;
-        for &len in &[256u64, 128, 64, 32] {
-            if let Some(bytes) = d.read_guest_bytes(ptr, len) {
-                let end = bytes.iter().position(|&b| b == 0).unwrap_or(bytes.len());
-                return Some(String::from_utf8_lossy(&bytes[..end]).to_string());
-            }
-        }
-        None
-    }
-
-    /// True if guest memory at `addr` on vCPU `vcpu` starts with the ELF magic.
-    /// Used to keep only real ELF images (filtering out data-file `mmap`s).
-    fn guest_is_elf(&self, vcpu: VCPUIndex, addr: u64) -> bool {
-        let pvd = self.per_vcpu_data.clone();
-        // SAFETY: on_syscall runs on this vCPU's own thread.
-        let Some(d) = (unsafe { pvd.get_mut(vcpu) }) else {
-            return false;
-        };
-        matches!(d.read_guest_bytes(addr, 4).as_deref(), Some(b"\x7fELF"))
-    }
-
     /// Write the cached meminfo plus the discovered shared-object mappings to
     /// the working directory as the single `TURBO_METADATA_FILE`. Called once
     /// meminfo is captured, then again each time a new library is discovered.
     fn write_metadata(&self) {
-        let libs: Vec<turbo_tracer_shared::LibMapping> = self
-            .lib_mappings
-            .iter()
-            .map(|(path, &base_address)| turbo_tracer_shared::LibMapping {
-                path: path.clone(),
-                base_address,
-            })
+        let libs: Vec<turbo_tracer_shared::LibMapping> = SyscallWatch::libs()
+            .into_iter()
+            .map(|(path, base_address)| turbo_tracer_shared::LibMapping { path, base_address })
             .collect();
         let metadata = turbo_tracer_shared::TurboMetadata {
             run_id: self.run_id,
@@ -2182,6 +2124,13 @@ impl HasCallbacks for TurboTracePlugin {
         use std::mem::offset_of;
 
         let tb_pc = tb.vaddr();
+
+        // A library the guest mapped since the last translation: rewrite the
+        // metadata now, before any of its code can run (it is translated
+        // first), so the live-trace path can resolve its PCs.
+        if SyscallWatch::libs_changed() {
+            self.write_metadata();
+        }
 
         let instructions: Vec<_> = tb.instructions().collect();
 
@@ -2784,97 +2733,6 @@ impl HasCallbacks for TurboTracePlugin {
         // Persist the shared-object mappings discovered from guest syscalls.
         self.write_metadata();
 
-        Ok(())
-    }
-
-    /// Observe guest syscall *entry* to discover shared-object load mappings.
-    /// We only stash the arguments here; the outcome (fd / mapped address) is
-    /// known at syscall return. See [`SYS_OPENAT`]/[`SYS_MMAP`]/[`SYS_CLOSE`].
-    fn on_syscall(
-        &mut self,
-        _id: PluginId,
-        vcpu: VCPUIndex,
-        num: i64,
-        a1: u64,
-        a2: u64,
-        _a3: u64,
-        _a4: u64,
-        a5: u64,
-        a6: u64,
-        _a7: u64,
-        _a8: u64,
-    ) -> Result<()> {
-        match num {
-            SYS_OPENAT => {
-                // a2 = const char *pathname (a1 = dirfd).
-                if let Some(path) = self.read_guest_cstr(vcpu, a2) {
-                    self.pending_openat.insert(vcpu, path);
-                }
-            }
-            SYS_MMAP => {
-                // a5 = fd, a6 = offset.
-                self.pending_mmap.insert(vcpu, (a5 as i64, a6));
-            }
-            SYS_CLOSE => {
-                // a1 = fd. Drop tracking so a later reuse of this fd number is
-                // not misattributed to the file that used to hold it.
-                self.open_fds.remove(&(a1 as i64));
-            }
-            _ => {}
-        }
-        Ok(())
-    }
-
-    /// Resolve syscall outcomes stashed by [`on_syscall`]: map fds to paths on
-    /// `openat` return, and record a shared object's load base when its
-    /// file-offset-0 segment is `mmap`ed (validated by ELF magic).
-    fn on_syscall_return(
-        &mut self,
-        _id: PluginId,
-        vcpu: VCPUIndex,
-        num: i64,
-        ret: i64,
-    ) -> Result<()> {
-        match num {
-            SYS_OPENAT => {
-                if let Some(path) = self.pending_openat.remove(&vcpu) {
-                    if ret >= 0 {
-                        self.open_fds.insert(ret, path);
-                    }
-                }
-            }
-            SYS_MMAP => {
-                if let Some((fd, offset)) = self.pending_mmap.remove(&vcpu) {
-                    // mmap failure returns a small negative errno; a success is
-                    // an address. Only the file-offset-0 segment lands at the
-                    // module load base.
-                    let mmap_failed = (-4095..0).contains(&ret);
-                    if !mmap_failed && offset == 0 && fd >= 0 {
-                        let base = ret as u64;
-                        if let Some(path) = self.open_fds.get(&fd).cloned() {
-                            if self.guest_is_elf(vcpu, base) {
-                                // A small object can map several segments at
-                                // page-aligned file offset 0 (each starting with
-                                // the ELF header bytes); the load base is the
-                                // lowest such address, so keep the minimum.
-                                let changed = match self.lib_mappings.get(&path) {
-                                    Some(&existing) => base < existing,
-                                    None => true,
-                                };
-                                if changed {
-                                    log::debug!("libmap: {path} @ 0x{base:x}");
-                                    self.lib_mappings.insert(path, base);
-                                    // Rewrite incrementally: the live-trace path
-                                    // reads this mid-run, before on_exit.
-                                    self.write_metadata();
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            _ => {}
-        }
         Ok(())
     }
 }
