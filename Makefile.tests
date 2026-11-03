@@ -1,5 +1,5 @@
 .PHONY: all test-bins rust-bins clean help
-.PHONY: asm-validation backward-branch-test basic-branch-asm simple-loop linker-flavours thread-roi
+.PHONY: asm-validation backward-branch-test basic-branch-asm simple-loop linker-flavours thread-roi syscall-race
 
 # Default target - build all test binaries
 all: test-bins rust-bins
@@ -17,7 +17,11 @@ help:
 	@echo "  clean                - Clean build artifacts"
 
 # Build all test binaries
-test-bins: asm-validation basic-branch-asm intensity-test simple-loop roi-validation linker-flavours thread-roi
+test-bins: asm-validation basic-branch-asm intensity-test simple-loop roi-validation linker-flavours thread-roi syscall-race
+
+syscall-race:
+	@echo "Building syscall_race..."
+	$(MAKE) -C test_bins/syscall_race
 
 asm-validation:
 	@echo "Building asm validation tests..."
@@ -63,4 +67,5 @@ clean:
 	cd test_bins/simple_loop && $(MAKE) clean || true
 	cd test_bins/asm_validation && $(MAKE) clean || true
 	cd test_bins/linker_flavours && $(MAKE) clean || true
+	cd test_bins/syscall_race && $(MAKE) clean || true
 	cd test_bins/thread_roi && $(MAKE) clean || true

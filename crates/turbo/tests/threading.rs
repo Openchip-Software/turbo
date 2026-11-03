@@ -237,3 +237,77 @@ fn single_thread_run_writes_no_per_thread_flamegraphs() {
         .collect();
     assert!(strays.is_empty(), "unexpected per-hart graphs: {strays:?}");
 }
+
+/// Regression test for the AB-BA deadlock fixed in turbo-tracer commit:
+/// "fix deadlock between syscall callbacks and translation"
+/// the openat/mmap callbacks read guest memory (taking QEMU's `mmap_lock`)
+/// under the plugin crate's global mutex, while a translating vCPU holds
+/// `mmap_lock` and waits for that same mutex. QEMU then hangs with every
+/// thread asleep.
+///
+/// `syscall_translate_race.c` keeps four threads in openat/mmap and four
+/// retranslating a self-modified code page on every iteration, all started on
+/// one barrier. A hang is the failure mode, so the recording runs under a
+/// watchdog that kills QEMU and fails the test instead of blocking forever.
+#[test]
+fn syscall_callbacks_do_not_deadlock_with_translation() {
+    const BIN: &str = "test_bins/syscall_race/syscall_translate_race.riscv";
+    // A clean run takes about a second; the deadlock never ends by itself.
+    const TIMEOUT: std::time::Duration = std::time::Duration::from_secs(30);
+    if skip_if_missing(BIN) {
+        return;
+    }
+
+    let out_dir = crate::harness::out_dir("syscall_translate_race");
+    let (tx, rx) = std::sync::mpsc::channel();
+    std::thread::spawn(move || {
+        let result = TurboTest::new("syscall_translate_race", BIN).try_record();
+        let _ = tx.send(result.map(|run| run.dir));
+    });
+
+    match rx.recv_timeout(TIMEOUT) {
+        Ok(result) => {
+            result.expect("`turbo record` of the syscall/translate race guest failed");
+        }
+        Err(_) => {
+            // Only the QEMU whose command line names this test's output
+            // directory: under `cargo test` every test shares one process, so
+            // other tests' QEMUs are children of it too.
+            let killed = kill_child_processes_matching(&out_dir.to_string_lossy());
+            panic!(
+                "QEMU still running after {TIMEOUT:?}: syscall callbacks deadlocked \
+                 with translation (killed child pids {killed:?})"
+            );
+        }
+    }
+}
+
+/// SIGKILL every direct child of this process whose command line contains
+/// `needle`, returning their pids.
+fn kill_child_processes_matching(needle: &str) -> Vec<u32> {
+    let mut pids = Vec::new();
+    for task in std::fs::read_dir("/proc/self/task")
+        .into_iter()
+        .flatten()
+        .flatten()
+    {
+        if let Ok(children) = std::fs::read_to_string(task.path().join("children")) {
+            pids.extend(
+                children
+                    .split_whitespace()
+                    .filter_map(|p| p.parse::<u32>().ok())
+                    .filter(|pid| {
+                        // NUL-separated argv; the needle sits inside one arg.
+                        std::fs::read(format!("/proc/{pid}/cmdline"))
+                            .is_ok_and(|c| String::from_utf8_lossy(&c).contains(needle))
+                    }),
+            );
+        }
+    }
+    for pid in &pids {
+        let _ = std::process::Command::new("kill")
+            .args(["-9", &pid.to_string()])
+            .status();
+    }
+    pids
+}
