@@ -136,13 +136,13 @@ pub(crate) struct RecordedDirMap {
 }
 
 impl RecordedDirMap {
-    pub(crate) fn new(binary: PathBuf, dir: PathBuf) -> Self {
+    /// `loader` is the guest sysroot (`loader_path`, QEMU's `-L`) that the
+    /// recorded shared-library paths are resolved under.
+    pub(crate) fn new(binary: PathBuf, dir: PathBuf, loader: PathBuf) -> Self {
         Self {
             binary,
             dir,
-            // `process` builds no QemuRunner, so there is no configured sysroot
-            // to inherit; this matches QemuRunner's own default.
-            loader: PathBuf::from("/usr/riscv64-linux-gnu/"),
+            loader,
             warned: false,
         }
     }
@@ -405,11 +405,12 @@ pub(crate) fn recorded_dir(
     dir: PathBuf,
     binary: PathBuf,
     hart_filter: Option<Vec<u32>>,
+    loader: PathBuf,
 ) -> SpoolSource<AlreadyFinished, RecordedDirMap> {
     SpoolSource::new(
         HartSpool::new(dir.clone(), hart_filter),
         AlreadyFinished,
-        RecordedDirMap::new(binary, dir),
+        RecordedDirMap::new(binary, dir, loader),
         // Offline: a trace moved away from its side files still decodes
         // against the main binary, with a warning.
         true,
@@ -421,13 +422,14 @@ pub(crate) fn recorded_single_log(
     path: &std::path::Path,
     hart_id: u32,
     binary: PathBuf,
+    loader: PathBuf,
 ) -> SpoolSource<AlreadyFinished, RecordedDirMap> {
     let spool = HartSpool::single_log(path, hart_id);
     let dir = spool.dir().to_path_buf();
     SpoolSource::new(
         spool,
         AlreadyFinished,
-        RecordedDirMap::new(binary, dir),
+        RecordedDirMap::new(binary, dir, loader),
         true,
     )
 }

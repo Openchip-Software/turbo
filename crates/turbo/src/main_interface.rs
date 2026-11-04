@@ -628,11 +628,11 @@ fn cmd_process(
     dump_pcs: bool,
     trace_input: PathBuf,
 ) -> anyhow::Result<()> {
-    // `process` has no `--env-config` of its own -- it never launches QEMU, so
-    // the rest of that file is nothing to it -- but it still reads the default
-    // one, because `default_cpu_config` must mean the same thing to every
-    // command or a `run` and a re-`process` of its recording would model
-    // different caches.
+    // `process` has no `--env-config` of its own -- it never launches QEMU --
+    // but it still reads the default one: `default_cpu_config` must mean the
+    // same thing to every command (or a `run` and a re-`process` of its
+    // recording would model different caches), and `loader_path` is the
+    // sysroot the recorded shared-library paths resolve under.
     let env_config = load_env_config(None);
     let cpu_config = load_cpu_config(&common, env_config.as_ref())?;
     let cache_sim = cpu_config
@@ -675,6 +675,7 @@ fn cmd_process(
             decode_only,
             dump_pcs,
             strict_trace: process.strict_trace,
+            loader_path: env_config.and_then(|c| c.loader_path),
         },
     )
 }
@@ -764,6 +765,8 @@ fn cmd_run(
                 // would report a mismatch against a deliberate override.
                 configured_vlen_bits: vlen_bits,
                 strict_trace: process.strict_trace,
+                // The sysroot the recording just ran with (QEMU's `-L`).
+                loader_path: env_config.as_ref().and_then(|c| c.loader_path.clone()),
                 ..Default::default()
             },
         )?;
