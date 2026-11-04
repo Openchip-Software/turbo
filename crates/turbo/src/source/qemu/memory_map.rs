@@ -468,10 +468,17 @@ mod tests {
     /// tree, so a unit test that read them would pass or fail depending on
     /// whether someone had run the guest-fixture build.
     fn elf_with_interp(interp: Option<&str>) -> Vec<u8> {
+        elf_with(interp, false)
+    }
+
+    /// As [`elf_with_interp`], optionally with one executable `PT_LOAD` at
+    /// vaddr 0x1000: [`MemoryMap::from_qemu_output`] needs one to compute the
+    /// main binary's load bias.
+    fn elf_with(interp: Option<&str>, exec_load: bool) -> Vec<u8> {
         const EHDR_LEN: u64 = 64;
         const PHDR_LEN: u64 = 56;
 
-        let phnum: u16 = u16::from(interp.is_some());
+        let phnum: u16 = u16::from(interp.is_some()) + u16::from(exec_load);
         let mut out = Vec::new();
         out.extend_from_slice(b"\x7fELF");
         out.push(2); // EI_CLASS: ELFCLASS64
@@ -493,12 +500,23 @@ mod tests {
         out.extend_from_slice(&0u16.to_le_bytes()); // e_shstrndx
         assert_eq!(out.len() as u64, EHDR_LEN);
 
+        if exec_load {
+            out.extend_from_slice(&elf::abi::PT_LOAD.to_le_bytes()); // p_type
+            out.extend_from_slice(&(elf::abi::PF_R | elf::abi::PF_X).to_le_bytes()); // p_flags
+            out.extend_from_slice(&0u64.to_le_bytes()); // p_offset
+            out.extend_from_slice(&0x1000u64.to_le_bytes()); // p_vaddr
+            out.extend_from_slice(&0x1000u64.to_le_bytes()); // p_paddr
+            out.extend_from_slice(&0u64.to_le_bytes()); // p_filesz
+            out.extend_from_slice(&0u64.to_le_bytes()); // p_memsz
+            out.extend_from_slice(&0x1000u64.to_le_bytes()); // p_align
+        }
+
         let Some(interp) = interp else {
             return out;
         };
 
-        // The interpreter string goes immediately after the one phdr.
-        let str_off = EHDR_LEN + PHDR_LEN;
+        // The interpreter string goes immediately after the phdrs.
+        let str_off = EHDR_LEN + PHDR_LEN * u64::from(phnum);
         let mut interp_bytes = interp.as_bytes().to_vec();
         interp_bytes.push(0);
 
@@ -514,6 +532,94 @@ mod tests {
 
         out.extend_from_slice(&interp_bytes);
         out
+    }
+
+    /// Write a `turbo_metadata.json` into `work_dir` describing a guest that
+    /// mapped the given (guest-path, base) shared objects.
+    fn write_metadata(work_dir: &Path, libs: &[(&str, u64)]) {
+        turbo_tracer_shared::TurboMetadata {
+            run_id: None,
+            vlen_bits: 128,
+            meminfo: Some(turbo_tracer_shared::MemMapInfo {
+                binary_path: String::new(),
+                start_code: 0x1000,
+                end_code: 0x2000,
+                entry_code: 0x1000,
+                vdso_addr: 0,
+                vdso_size: 0,
+            }),
+            libs: libs
+                .iter()
+                .map(|&(path, base_address)| turbo_tracer_shared::LibMapping {
+                    path: path.to_string(),
+                    base_address,
+                })
+                .collect(),
+        }
+        .write_to_workdir(work_dir)
+        .unwrap();
+    }
+
+    /// Regression for the sysroot bug report: with `loader_path` pointing at a
+    /// sysroot other than `/usr/riscv64-linux-gnu/` (e.g. `$SYSROOT_PATH` in
+    /// the devcontainer, with `libc6-dev-riscv64-cross` uninstalled), the guest
+    /// path `/lib/libc.so.6` the plugin observed must resolve under THAT
+    /// sysroot. It used to be passed on as a guest path and resolved against a
+    /// hardcoded `/usr/riscv64-linux-gnu/` downstream, so every library was
+    /// "missing" and the enricher could not decode any PC inside libc.
+    #[test]
+    fn shared_libs_resolve_under_the_configured_sysroot() {
+        let dir = tmp_dir("custom_sysroot");
+        let bin = dir.join("static.riscv");
+        std::fs::write(&bin, elf_with(None, true)).unwrap();
+        let sysroot = dir.join("my-sysroot");
+        std::fs::create_dir_all(sysroot.join("lib")).unwrap();
+        std::fs::write(sysroot.join("lib/libc.so.6"), b"stand-in").unwrap();
+        write_metadata(&dir, &[("/lib/libc.so.6", 0x4000_0000)]);
+
+        let map = MemoryMap::from_qemu_output(&bin, &dir, &sysroot, None, None, false).unwrap();
+
+        assert_eq!(map.objects.len(), 1, "{:?}", map.objects);
+        assert_eq!(map.objects[0].path, sysroot.join("lib/libc.so.6"));
+        assert_eq!(map.objects[0].base_address, 0x4000_0000);
+    }
+
+    /// QEMU falls back to the guest path verbatim when the sysroot has no such
+    /// file, which is how a local `.so` found via rpath / `LD_LIBRARY_PATH`
+    /// gets mapped: it must resolve to that real host path.
+    #[test]
+    fn shared_lib_outside_the_sysroot_resolves_verbatim() {
+        let dir = tmp_dir("lib_outside_sysroot");
+        let bin = dir.join("static.riscv");
+        std::fs::write(&bin, elf_with(None, true)).unwrap();
+        let local_lib = dir.join("libadd.so");
+        std::fs::write(&local_lib, b"stand-in").unwrap();
+        let guest = local_lib.display().to_string();
+        write_metadata(&dir, &[(&guest, 0x4000_0000)]);
+
+        let map =
+            MemoryMap::from_qemu_output(&bin, &dir, &dir.join("my-sysroot"), None, None, false)
+                .unwrap();
+
+        assert_eq!(map.objects[0].path, local_lib);
+    }
+
+    /// A guest path that climbs out of the sysroot is not joined under it
+    /// (which would name a host file outside the sysroot); like QEMU's `-L`,
+    /// it falls back to the guest path verbatim.
+    #[test]
+    fn shared_lib_path_escaping_the_sysroot_falls_back_to_the_guest_path() {
+        let dir = tmp_dir("lib_escape");
+        let bin = dir.join("static.riscv");
+        std::fs::write(&bin, elf_with(None, true)).unwrap();
+        let sysroot = dir.join("my-sysroot");
+        std::fs::create_dir_all(&sysroot).unwrap();
+        std::fs::write(dir.join("secret.so"), b"outside").unwrap();
+        write_metadata(&dir, &[("/../secret.so", 0x4000_0000)]);
+
+        let map = MemoryMap::from_qemu_output(&bin, &dir, &sysroot, None, None, false).unwrap();
+
+        assert_eq!(map.objects[0].path, PathBuf::from("/../secret.so"));
     }
 
     fn write_elf(dir: &Path, name: &str, interp: Option<&str>) -> PathBuf {
