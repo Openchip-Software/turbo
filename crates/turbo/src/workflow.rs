@@ -1717,6 +1717,10 @@ pub struct ProcessTraceOptions {
     /// `--strict-trace`: fail instead of reporting a trace that does not cover
     /// the whole run. Default `false`, matching the CLI.
     pub strict_trace: bool,
+    /// Guest sysroot (`loader_path` in `environment_config.json`, QEMU's `-L`)
+    /// the recorded shared-library paths are resolved under. `None` uses
+    /// QemuRunner's default.
+    pub loader_path: Option<PathBuf>,
 }
 
 /// Hand-written rather than derived, for the same reason as `ProcessArgs`'s:
@@ -1740,6 +1744,7 @@ impl Default for ProcessTraceOptions {
             decode_only: false,
             dump_pcs: false,
             strict_trace: false,
+            loader_path: None,
         }
     }
 }
@@ -1767,7 +1772,10 @@ pub fn process_trace_input_file(
         decode_only,
         dump_pcs,
         strict_trace,
+        loader_path,
     } = opts;
+    let loader = loader_path
+        .unwrap_or_else(|| crate::source::qemu::qemu_runner::PathConfig::default().loader_path);
 
     log::info!("Starting trace-elf processing..");
 
@@ -1827,7 +1835,7 @@ pub fn process_trace_input_file(
     let result = match input {
         TraceInput::RecordedDir { dir, harts } => {
             log::info!("Binary: {:?}, recorded spool: {:?}", binary, dir);
-            let src = source::recorded_dir(dir, binary.clone(), harts);
+            let src = source::recorded_dir(dir, binary.clone(), harts, loader);
             run_with!(src)
         }
         TraceInput::RecordedLog { path, hart_id } => {
@@ -1837,7 +1845,7 @@ pub fn process_trace_input_file(
                 path,
                 hart_id
             );
-            let src = source::recorded_single_log(&path, hart_id, binary.clone());
+            let src = source::recorded_single_log(&path, hart_id, binary.clone(), loader);
             run_with!(src)
         }
     };

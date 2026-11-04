@@ -21,9 +21,9 @@ type Elf<'a> = elf::ElfBytes<'a, elf::endian::LittleEndian>;
 /// `path`, relocate by `base_address`.
 #[derive(Debug, Clone)]
 pub struct ObjectMapping {
-    /// A guest path for a shared library (resolved to a host path downstream by
-    /// `ElfMetadata::add_shared_lib`), a host path for the dynamic linker, and
-    /// the `vdso_mem.dump` path for the vDSO.
+    /// Host path of the object: shared libraries and the dynamic linker are
+    /// resolved against the sysroot (`loader_path`) here, the vDSO is the
+    /// `vdso_mem.dump` path.
     pub path: PathBuf,
     pub base_address: u64,
 }
@@ -166,12 +166,13 @@ impl MemoryMap {
 
         // Shared libraries, discovered by the plugin from the guest's
         // openat/mmap syscalls: authoritative runtime bases, and it catches
-        // dlopen'd objects too.
+        // dlopen'd objects too. The plugin records the path as the *guest*
+        // named it, so it is mapped to the host file QEMU actually opened.
         let mut objects: Vec<ObjectMapping> = metadata
             .libs
             .into_iter()
             .map(|m| ObjectMapping {
-                path: PathBuf::from(m.path),
+                path: resolve_guest_path(loader_path, &m.path),
                 base_address: m.base_address,
             })
             .collect();
@@ -210,6 +211,23 @@ impl MemoryMap {
             objects,
         })
     }
+}
+
+/// Map a guest path to the host file QEMU-user opens for it, mirroring its
+/// `-L` lookup (`util/path.c`): an absolute guest path is tried under the
+/// sysroot first, then verbatim on the host (how a local `.so` found via rpath
+/// or `LD_LIBRARY_PATH` is reached). A relative path, a path that would escape
+/// the sysroot, or one found in neither place is returned verbatim; a missing
+/// file is reported by whoever tries to read it.
+fn resolve_guest_path(loader_path: &Path, guest: &str) -> PathBuf {
+    if let Some(candidate) = guest
+        .strip_prefix('/')
+        .and_then(|rel| crate::util::join_under(loader_path, rel))
+        .filter(|c| c.exists())
+    {
+        return candidate;
+    }
+    PathBuf::from(guest)
 }
 
 /// Lowest vaddr of any executable `PT_LOAD` segment: the offset that QEMU's
@@ -620,6 +638,45 @@ mod tests {
         let map = MemoryMap::from_qemu_output(&bin, &dir, &sysroot, None, None, false).unwrap();
 
         assert_eq!(map.objects[0].path, PathBuf::from("/../secret.so"));
+    }
+
+    /// The sysroot lookup itself must refuse a `..` escape: a plain `join`
+    /// would yield `<sysroot>/../x.so`, which exists here (it is `<dir>/x.so`).
+    #[test]
+    fn resolve_guest_path_does_not_join_an_escape_under_the_sysroot() {
+        let dir = tmp_dir("resolve_escape");
+        let sysroot = dir.join("my-sysroot");
+        std::fs::create_dir_all(&sysroot).unwrap();
+        std::fs::write(dir.join("x.so"), b"outside").unwrap();
+
+        assert_eq!(
+            resolve_guest_path(&sysroot, "/../x.so"),
+            PathBuf::from("/../x.so")
+        );
+    }
+
+    /// `turbo process` builds no QemuRunner: the recorded-directory provider
+    /// must still resolve libraries under the sysroot it is given (the
+    /// configured `loader_path`), not a hardcoded `/usr/riscv64-linux-gnu/`.
+    #[test]
+    fn recorded_dir_resolves_shared_libs_under_the_given_sysroot() {
+        use crate::source::spool_source::{MemoryMapProvider, RecordedDirMap};
+
+        let dir = tmp_dir("recorded_custom_sysroot");
+        let bin = dir.join("static.riscv");
+        std::fs::write(&bin, elf_with(None, true)).unwrap();
+        let sysroot = dir.join("my-sysroot");
+        std::fs::create_dir_all(sysroot.join("lib")).unwrap();
+        std::fs::write(sysroot.join("lib/libc.so.6"), b"stand-in").unwrap();
+        write_metadata(&dir, &[("/lib/libc.so.6", 0x4000_0000)]);
+
+        let map = RecordedDirMap::new(bin, dir.clone(), sysroot.clone())
+            .try_build(true)
+            .unwrap()
+            .expect("memory map recovered");
+
+        assert_eq!(map.objects.len(), 1, "{:?}", map.objects);
+        assert_eq!(map.objects[0].path, sysroot.join("lib/libc.so.6"));
     }
 
     fn write_elf(dir: &Path, name: &str, interp: Option<&str>) -> PathBuf {

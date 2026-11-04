@@ -152,71 +152,10 @@ impl ElfMetadata {
             base,
             lib.display()
         );
+        // `lib` is already a host path: `MemoryMap` resolved it against the
+        // configured sysroot (`loader_path`), the same way QEMU's `-L` did.
         let so_path = lib;
-
-        // A vDSO dump (always named `QEMU_VDSO_DUMP_FILE`) and an
-        // already-sysroot-prefixed path are used as-is; anything else is a guest
-        // path that needs the RISC-V sysroot prepended.
-        let is_vdso_dump =
-            so_path.file_name() == Some(std::ffi::OsStr::new(turbo_tracer_shared::VDSO_DUMP_FILE));
-
-        let already_riscv_prefixed = so_path.starts_with("/usr/riscv64-linux-gnu/");
-
-        let so_path_buf = if (is_vdso_dump || already_riscv_prefixed) && so_path.exists() {
-            log::debug!(
-                "Using provided path as-is for library at base 0x{:x}: {:?}",
-                base,
-                so_path
-            );
-            so_path.to_path_buf()
-        } else {
-            // Standard shared library path transformation for /usr/riscv64-linux-gnu/
-            let base_riscv_path = PathBuf::from("/usr/riscv64-linux-gnu/");
-
-            // UGH: .join() with an absolute path throws away the "base" part.
-            let Ok(stripped_path) = so_path.strip_prefix("/") else {
-                log::error!("problem processing .so path {:?}", so_path);
-                return Err(RerfError::path_processing_failed(format!(
-                    "the so path must be absolute at this point: {:?}",
-                    so_path
-                )));
-            };
-
-            // strip the "RiscV prefix away" as its sometimes present for ld.so, not for other libs :/
-            let stripped_path = stripped_path
-                .strip_prefix("usr/riscv64-linux-gnu")
-                .unwrap_or(stripped_path);
-
-            // now join the "non absolute" path with our prefix for riscv shared
-            // objects. The path came from the traced binary, so a `..` in it
-            // would resolve to a host file outside the sysroot entirely.
-            let Some(joined) = crate::util::join_under(&base_riscv_path, stripped_path) else {
-                log::error!("library path escapes the sysroot: {:?}", so_path);
-                return Err(RerfError::path_processing_failed(format!(
-                    "the so path must stay under {}: {:?}",
-                    base_riscv_path.display(),
-                    so_path
-                )));
-            };
-            joined
-        };
-
-        // The sysroot transform above assumes the library lives under the RISC-V
-        // sysroot (true for libc, ld.so, etc.). A binary may also link against a
-        // local shared object that lives outside the sysroot (e.g. resolved via
-        // an $ORIGIN rpath), in which case the loader reports its real absolute
-        // path. If the sysroot-translated path doesn't exist but the original
-        // absolute path does, fall back to the original.
-        let so_path_buf = if !so_path_buf.exists() && so_path.exists() {
-            log::debug!(
-                "Sysroot path {:?} not found; using original existing path {:?}",
-                so_path_buf,
-                so_path
-            );
-            so_path.to_path_buf()
-        } else {
-            so_path_buf
-        };
+        let so_path_buf = lib.to_path_buf();
 
         log::debug!(
             "Loading shared library {} at base 0x{:x}",
@@ -225,7 +164,11 @@ impl ElfMetadata {
         );
 
         if !so_path_buf.exists() {
-            log::error!("Shared library {:?} does not exist, skipping", so_path_buf);
+            log::error!(
+                "Shared library {:?} does not exist (is `loader_path` in \
+                 environment_config.json the guest sysroot?), skipping",
+                so_path_buf
+            );
             return Ok(());
         }
 
